@@ -54,12 +54,13 @@
   // Suppliers (stock checked 2026-06-09). The design palette is shared; the toggle
   // reframes pricing/links/stock for the BOM. Hitex/Tufting Shop links go to their
   // catalogue (no per-colour slugs); their colour match is approximate.
+  // mat = rough material costs (primary cloth, tuft glue, backing) for a 2×2m rug, in the supplier's currency — editable.
   const SUPPLIERS = {
-    te:          { label:'Tufting Europe', cur:'€',  unit:'cone', coneG:500, price:17.5,  link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s },
-    tuftingshop: { label:'Tufting Shop',   cur:'€',  unit:'cone', coneG:500, price:17.85, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true },
-    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594,   link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true },
+    te:          { label:'Tufting Europe', cur:'€',  unit:'cone', coneG:500, price:17.5,  link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:45, glue:20, backing:18} },
+    tuftingshop: { label:'Tufting Shop',   cur:'€',  unit:'cone', coneG:500, price:17.85, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:45, glue:20, backing:18} },
+    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594,   link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190} },
   };
-  let supplier = 'te';
+  let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let fillColor = null, recolorTarget = null;
   let showGrid = true, fillMode = false;
@@ -217,8 +218,17 @@
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="n">${kg.toFixed(2)} kg</td><td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
+    // materials: primary cloth, glue, backing (editable, supplier currency)
+    const cloth=parseFloat($('#matCloth').value)||0, glue=parseFloat($('#matGlue').value)||0, backing=parseFloat($('#matBacking').value)||0;
+    const matSum=cloth+glue+backing;
+    if (filled){
+      [['Primary tufting cloth',cloth],['Tuft glue',glue],['Backing / anti-slip',backing]].forEach(([nm,cost])=>{
+        rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+      });
+    }
+    const grand=totalCost+matSum;
     const total = filled
-      ? `<strong>${totalKg.toFixed(1)} kg</strong> · ${totalCones?totalCones+' cones · ':''}<strong>${sup.cur}${totalCost.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
+      ? `<strong>${totalKg.toFixed(1)} kg</strong>${totalCones?' · '+totalCones+' cones':''} · yarn ${sup.cur}${totalCost.toFixed(0)} + materials ${sup.cur}${matSum.toFixed(0)} = <strong>${sup.cur}${grand.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
       : 'Upload artwork to see the yarn estimate.';
     $('#bom').innerHTML = filled
       ? `<table class="est-table"><tbody>${rows}</tbody></table><div class="est-total">${total}</div>`
@@ -263,12 +273,14 @@
   function afterEdit(){ redrawAll(); renderRecolour(); }
   function updateLabels(){ $('#dimLabel').textContent=`${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`; $('#cellLabel').textContent=`${Math.round(RUG_M/N*1000)} mm`; }
 
-  // ---------- supplier (BOM pricing / links / stock) ----------
-  $('#supplier').onchange = e=>{
-    supplier=e.target.value; const sup=SUPPLIERS[supplier];
+  // ---------- supplier (BOM pricing / links / stock / materials) ----------
+  function setSupplierDefaults(){
+    const sup=SUPPLIERS[supplier];
     $('#unitPrice').value=sup.price; $('#priceLbl').textContent=sup.cur+' / '+sup.unit;
-    renderEstimate(); renderRecolour();
-  };
+    $('#matCloth').value=sup.mat.cloth; $('#matGlue').value=sup.mat.glue; $('#matBacking').value=sup.mat.backing;
+  }
+  $('#supplier').onchange = e=>{ supplier=e.target.value; setSupplierDefaults(); renderEstimate(); renderRecolour(); };
+  ['#matCloth','#matGlue','#matBacking'].forEach(s=> $(s).oninput=renderEstimate);
 
   // ---------- import artwork ----------
   function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
@@ -392,7 +404,7 @@
   $('#unitPrice').oninput = renderEstimate;
 
   // ---------- init ----------
-  applySplit(); applyCurtain();
+  applySplit(); applyCurtain(); setSupplierDefaults();
   grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image();

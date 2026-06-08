@@ -83,12 +83,18 @@
     <div class="dock-row" id="bomControls">
       <span class="lbl">Supplier</span>
       <select id="supplier">
-        <option value="te" selected>Tufting Europe</option>
+        <option value="hitex" selected>Hitex · SE</option>
+        <option value="te">Tufting Europe</option>
         <option value="tuftingshop">Tufting Shop · SE</option>
-        <option value="hitex">Hitex · SE</option>
       </select>
       <span class="lbl">Density</span><input type="number" id="density" value="2.6" min="0.5" max="6" step="0.1">
-      <span class="lbl" id="priceLbl">€ / cone</span><input type="number" id="unitPrice" value="17.5" min="0" step="0.5">
+      <span class="lbl" id="priceLbl">kr / kg</span><input type="number" id="unitPrice" value="594" min="0" step="1">
+    </div>
+    <div class="dock-row" id="materialsRow">
+      <span class="lbl">Materials</span>
+      <span class="lbl">Cloth</span><input type="number" id="matCloth" min="0" step="1">
+      <span class="lbl">Glue</span><input type="number" id="matGlue" min="0" step="1">
+      <span class="lbl">Backing</span><input type="number" id="matBacking" min="0" step="1">
     </div>
     <div class="dock-row" id="bom"></div>
   </div>
