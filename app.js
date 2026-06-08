@@ -173,7 +173,7 @@
       studioCanvas.style.width=W+'px'; studioCanvas.style.height=H+'px';
       studioCanvas.style.transform=matFromCorners(W,H,corners);
       $('#studioWarp').style.mixBlendMode=BG[bgKey].blend;
-      positionHandles(); syncXY();
+      positionHandles(); syncXY(); queueSave();
     });
   }
   function drawStudio(){ paintStudio(); placeStudio(); }
@@ -293,11 +293,11 @@
     drawStudio();                                                  // paintStudio blits the same cache
     renderEstimate();
   }
-  function afterEdit(){ redrawAll(); renderRecolour(); }
+  function afterEdit(){ redrawAll(); renderRecolour(); queueSave(); }
   function updateLabels(){ $('#dimLabel').textContent=`${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`; $('#cellLabel').textContent=`${Math.round(RUG_M/N*1000)} mm`; }
 
   // ---------- supplier (BOM pricing / links / stock) ----------
-  $('#supplier').onchange = e=>{ supplier=e.target.value; renderEstimate(); renderRecolour(); };
+  $('#supplier').onchange = e=>{ supplier=e.target.value; renderEstimate(); renderRecolour(); queueSave(); };
 
   // ---------- import artwork ----------
   const palRgb = () => palette.map(c=>hexToRgb(c.hex));
@@ -416,12 +416,39 @@
   // ---------- keyboard ----------
   window.addEventListener('keydown', e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); } });
 
+  // ---------- persistence (localStorage) ----------
+  const LS_KEY='klattermusen.v1';
+  let saveTimer=null;
+  function saveState(){
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, chipOrder, corners, recolorTarget, supplier, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
+  }
+  function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 400); }
+  function loadState(){
+    try{
+      const raw=localStorage.getItem(LS_KEY); if(!raw) return false;
+      const d=JSON.parse(raw); if(!d.grid) return false;
+      N=d.N; grid=d.grid; if(d.palette) palette=d.palette;
+      groundIdx=d.groundIdx; patternB=d.patternB; chipOrder=d.chipOrder||[]; recolorTarget=d.recolorTarget;
+      if(d.corners) corners=d.corners;
+      if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
+      if(d.patType) $('#patType').value=d.patType; if(d.patSize) $('#patSize').value=d.patSize;
+      groundMask=new Uint8Array(N*N);                          // background region = ground + alt-bg cells
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; groundMask[y*N+x]=(v===groundIdx||v===patternB)?1:0; }
+      updateLabels(); afterEdit(); fitMedia();
+      return true;
+    }catch(_){ return false; }
+  }
+  $('#clearAll').onclick = ()=>{ if(confirm('Reset to the Klättermusens logo and clear your saved design?')){ try{ localStorage.removeItem(LS_KEY); }catch(_){ } location.reload(); } };
+
   // ---------- init ----------
   applySplit(); applyCurtain();
-  grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
-  fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
-    $('#importInvert').checked=true; const img=new Image();
-    img.onload=()=>{ importImage(img); undoStack.length=0; redoStack.length=0; renderRecolour(); };  // initial load isn't an undoable step
-    img.src=URL.createObjectURL(b);
-  }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
+  grid = blankGrid(N); updateLabels();
+  if (!loadState()){                                           // restore saved work, else auto-load the logo
+    afterEdit(); fitMedia();
+    fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
+      $('#importInvert').checked=true; const img=new Image();
+      img.onload=()=>{ importImage(img); undoStack.length=0; redoStack.length=0; renderRecolour(); };
+      img.src=URL.createObjectURL(b);
+    }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
+  }
 })();
