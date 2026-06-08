@@ -38,6 +38,18 @@
       </div>
     </details>
   </div>
+  <div class="spacer"></div>
+  <details class="menu" id="bomMenu">
+    <summary id="bomSummary">BOM</summary>
+    <div class="menu-pop">
+      <select id="supplier">
+        <option value="hitex" selected>Hitex · SE</option>
+        <option value="te">Tufting Europe</option>
+        <option value="tuftingshop">Tufting Shop · SE</option>
+      </select>
+      <div id="bom"></div>
+    </div>
+  </details>
   <div class="dims">Rug <strong id="dimLabel">2.0 × 2.0 m</strong> · <strong id="cellLabel">5 mm</strong></div>
 </header>
 
@@ -75,30 +87,18 @@
     </div>
   </div>
 
-  <!-- BOM: small, floating top-right -->
-  <div id="bomPanel">
-    <select id="supplier">
-      <option value="hitex" selected>Hitex · SE</option>
-      <option value="te">Tufting Europe</option>
-      <option value="tuftingshop">Tufting Shop · SE</option>
-    </select>
-    <div id="bom"></div>
-  </div>
-
   <!-- bottom dock: colours + background -->
   <div id="dock">
     <div class="dock-row" id="rugColors"></div>
-    <div class="dock-row tray" id="paletteTray"></div>
     <div class="dock-row" id="patternRow">
       <span class="lbl">Background</span>
       <select id="patType">
         <option value="plain" selected>Plain</option>
         <option value="checker">Checker</option>
       </select>
-      <span class="lbl">with</span>
-      <select id="patColor"></select>
       <span class="lbl">Size</span><input type="number" id="patSize" value="40" min="1" max="120">
     </div>
+    <div class="dock-row tray" id="paletteTray"></div>
   </div>
 </main>
 

@@ -64,7 +64,7 @@
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let recolorTarget = null;
-  let groundIdx = null, lastPatColor = null;   // background-pattern state
+  let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
 
   const undoStack = [], redoStack = [];
   function blankGrid(n){ return Array.from({length:n}, () => new Array(n).fill(-1)); }
@@ -89,7 +89,6 @@
       dctx.fillStyle = v<0 ? '#fbfaf7' : palette[v].hex;
       dctx.fillRect(x*s, y*s, Math.ceil(s), Math.ceil(s));
     }
-    dctx.strokeStyle='rgba(0,0,0,.35)'; dctx.lineWidth=2; dctx.strokeRect(1,1,w-2,w-2);
   }
 
   // ---------- render: tufted wool ----------
@@ -222,6 +221,7 @@
     $('#bom').innerHTML = filled
       ? `<table class="est-table"><tbody>${rows}</tbody></table><div class="est-total">${total}</div>`
       : `<span class="lbl">${total}</span>`;
+    $('#bomSummary').textContent = filled ? (sup.cur+grand.toFixed(0)) : 'BOM';
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
@@ -231,26 +231,25 @@
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to;
     // keep pattern state in sync so re-patterning doesn't stack old colours
     if(groundIdx===from) groundIdx=to;
-    if(lastPatColor===from) lastPatColor=to;
-    const ps=$('#patColor'); if(ps && +ps.value===from) ps.value=String(to);
+    if(patternB===from) patternB=to;
     recolorTarget=to; afterEdit();
   }
 
-  // ---------- background pattern (fills the dominant 'ground' region with a 2-colour pattern) ----------
-  function populatePatColors(){ const sel=$('#patColor'); sel.innerHTML=''; palette.forEach((c,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=c.name; sel.appendChild(o); }); sel.value='1'; }
+  // ---------- background pattern (mask-based: only the background cells, never the symbol) ----------
+  function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
   function applyPattern(){
-    if(groundIdx==null) return;
-    const type=$('#patType').value, pc=+$('#patColor').value, b=Math.max(1,parseInt($('#patSize').value)||20);
+    if(!groundMask) return;
+    const type=$('#patType').value, b=Math.max(1,parseInt($('#patSize').value)||40);
+    if(type==='checker' && patternB==null) patternB=defaultPatternB();
     pushHistory();
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){
-      const v=grid[y][x];
-      if(v!==groundIdx && v!==pc && v!==lastPatColor) continue;   // only re-pattern the background region
-      const g = type==='checker' ? (((Math.floor(x/b)+Math.floor(y/b))&1)===0) : true;   // plain = all ground
-      grid[y][x]= g?groundIdx:pc;
+      if(!groundMask[y*N+x]) continue;                            // pattern only touches captured background cells
+      const g = type==='checker' ? (((Math.floor(x/b)+Math.floor(y/b))&1)===0) : true;
+      grid[y][x]= g?groundIdx:patternB;
     }
-    lastPatColor=pc; afterEdit();
+    afterEdit();
   }
-  $('#patType').onchange=applyPattern; $('#patColor').onchange=applyPattern; $('#patSize').onchange=applyPattern;
+  $('#patType').onchange=applyPattern; $('#patSize').onchange=applyPattern;
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
@@ -264,7 +263,7 @@
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
-      const role=document.createElement('span'); role.className='role'; role.textContent=(i===groundIdx||i===lastPatColor)?'background':'symbol';
+      const role=document.createElement('span'); role.className='role'; role.textContent=(i===groundIdx||i===patternB)?'background':'symbol';
       chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
       chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
@@ -316,8 +315,10 @@
       remap[i]=best;
     }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
-    // dominant colour = the rug's background (target for patterns)
-    { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc)); lastPatColor=null; if($('#patType')) $('#patType').value='plain'; }
+    // dominant colour = the rug's background; capture a fixed mask so patterns never touch the symbol
+    { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc));
+      groundMask=new Uint8Array(N*N); for(let y=0;y<N;y++)for(let x=0;x<N;x++) groundMask[y*N+x]= tmp[y][x]===groundIdx?1:0;
+      patternB=null; if($('#patType')) $('#patType').value='plain'; }
     grid=tmp; afterEdit();
   }
 
@@ -382,7 +383,7 @@
   $('#exportDesign').onclick = ()=>{ const W=1600,s=W/N,c=document.createElement('canvas'); c.width=c.height=W; const x=c.getContext('2d'); for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){ const v=grid[yy][xx]; x.fillStyle=v<0?'#ffffff':palette[v].hex; x.fillRect(xx*s,yy*s,Math.ceil(s),Math.ceil(s)); } downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
-  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
+  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; groundMask=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
 
   // ---------- compare curtain (drag to reveal artwork vs tufted) ----------
   let curtainX = 50, curtainDrag = false;
@@ -399,7 +400,7 @@
   window.addEventListener('keydown', e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); } });
 
   // ---------- init ----------
-  applySplit(); applyCurtain(); populatePatColors();
+  applySplit(); applyCurtain();
   grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image();
