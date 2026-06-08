@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TuftView — 2×2m Rug Designer</title>
+<style>
+  :root {
+    --rug-m: 2.0;                /* real-world rug size, metres (square) */
+    --bg: #f4f1ec;
+    --panel: #ffffff;
+    --ink: #2c2a26;
+    --ink-soft: #6f6a61;
+    --line: #d8d2c7;
+    --line-soft: #e8e3d9;
+    --accent: #b4502e;
+    --accent-soft: #f0e2db;
+    --radius: 8px;
+    --gap: 14px;
+    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap;
+    padding: 12px 20px; border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  header h1 { font-size: 17px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  header h1 b { color: var(--accent); font-weight: 650; }
+  header .dims { color: var(--ink-soft); font-size: 13px; }
+  header .dims strong { color: var(--ink); font-weight: 600; }
+  header .spacer { flex: 1; }
+  header .hint { color: var(--ink-soft); font-size: 12px; }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 240px 1fr 230px;
+    gap: var(--gap);
+    padding: var(--gap);
+    align-items: start;
+  }
+  @media (max-width: 1100px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+  }
+  .panel h2 {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .9px;
+    color: var(--ink-soft); margin: 0; padding: 12px 14px 8px;
+    font-weight: 700;
+  }
+  .panel .body { padding: 0 14px 14px; }
+
+  /* ---- controls ---- */
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .row + .row { margin-top: 10px; }
+  label.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-soft); }
+  select, input[type="number"], input[type="text"] {
+    font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line);
+    border-radius: 6px; background: #fff; color: var(--ink); width: 100%;
+  }
+  button {
+    font: inherit; font-size: 13px; padding: 7px 11px; border: 1px solid var(--line);
+    border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: background .12s, border-color .12s;
+  }
+  button:hover { background: var(--accent-soft); border-color: var(--accent); }
+  button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.ghost { background: transparent; }
+  button:disabled { opacity: .4; cursor: default; background:#fff; border-color: var(--line); }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; }
+  .seg button + button { border-left: 1px solid var(--line); }
+
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  /* ---- palette ---- */
+  .swatches { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .swatch {
+    position: relative; aspect-ratio: 1; border-radius: 6px; cursor: pointer;
+    border: 2px solid transparent; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
+  }
+  .swatch.sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12), 0 0 0 2px #fff, 0 0 0 4px var(--ink); }
+  .swatch .cnt {
+    position: absolute; right: 2px; bottom: 1px; font-size: 9px; font-weight: 700;
+    color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); pointer-events: none;
+  }
+  .swatch.eraser { background:
+      repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 12px 12px;
+  }
+  .palette-tools { margin-top: 10px; }
+  .palette-tools .row { gap: 6px; }
+  #colorEdit { width: 34px; height: 30px; padding: 2px; border-radius: 6px; border: 1px solid var(--line); background:#fff; cursor: pointer; }
+
+  /* ---- canvas stage ---- */
+  .stage { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .tabs { display: inline-flex; gap: 4px; background: var(--line-soft); padding: 4px; border-radius: 8px; }
+  .tabs button { background: transparent; border: 0; padding: 6px 14px; border-radius: 6px; color: var(--ink-soft); }
+  .tabs button.active { background: #fff; color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+
+  .canvas-wrap {
+    position: relative; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px;
+  }
+  .ruler-x, .ruler-y { position: absolute; color: var(--ink-soft); font-size: 11px; font-variant-numeric: tabular-nums; }
+  canvas { display: block; touch-action: none; image-rendering: auto; }
+  #designCanvas { cursor: crosshair; border-radius: 2px; }
+
+  .view { display: none; }
+  .view.show { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+
+  /* ---- studio view ---- */
+  .studio-wrap { position: relative; width: min(80vw, 820px); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+  .studio-wrap img.bg { width: 100%; display: block; }
+  #studioWarp {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; mix-blend-mode: multiply;
+  }
+  #studioWarp canvas { position: absolute; top:0; left:0; transform-origin: 0 0; }
+  .handle {
+    position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+    border-radius: 50%; background: var(--accent); border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: grab; touch-action: none; z-index: 5;
+  }
+  .handle:active { cursor: grabbing; }
+
+  .meta { color: var(--ink-soft); font-size: 12px; text-align: center; }
+  .est-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .est-table td { padding: 3px 2px; border-bottom: 1px solid var(--line-soft); }
+  .est-table td.c { width: 16px; }
+  .est-table td .dot { width: 14px; height: 14px; border-radius: 3px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+  .est-total { font-size: 12px; margin-top: 8px; color: var(--ink-soft); }
+  .est-total strong { color: var(--ink); }
+  .stack > * + * { margin-top: 9px; }
+  .kbd { font: 11px var(--font); background: var(--line-soft); border:1px solid var(--line); border-radius: 4px; padding: 1px 5px; color: var(--ink-soft); }
+  .note { font-size: 11px; color: var(--ink-soft); line-height: 1.5; }
+</style>
+</head>
+<body>
+<header>
+  <h1><b>TuftView</b> &nbsp;Rug Designer</h1>
+  <div class="dims">Rug <strong id="dimLabel">2.0 × 2.0 m</strong> · cell <strong id="cellLabel">10 cm</strong></div>
+  <div class="spacer"></div>
+  <div class="hint"><span class="kbd">B</span> brush · <span class="kbd">F</span> fill · <span class="kbd">I</span> pick · <span class="kbd">E</span> erase · <span class="kbd">⌘Z</span> undo</div>
+</header>
+
+<div class="layout">
+  <!-- LEFT: tools + palette -->
+  <div class="stack">
+    <div class="panel">
+      <h2>Tool</h2>
+      <div class="body">
+        <div class="seg" id="toolSeg">
+          <button data-tool="brush" class="active">✏︎ Brush</button>
+          <button data-tool="fill">🪣 Fill</button>
+        </div>
+        <div class="seg" id="toolSeg2" style="margin-top:8px;">
+          <button data-tool="pick">💧 Pick</button>
+          <button data-tool="erase">⌫ Erase</button>
+        </div>
+        <label class="fld" style="margin-top:12px;">Brush size: <span id="brushVal">1</span>
+          <input type="range" id="brushSize" min="1" max="6" value="1">
+        </label>
+        <label class="fld" style="margin-top:10px;">Symmetry
+          <select id="symmetry">
+            <option value="none">None</option>
+            <option value="x">Mirror ↔</option>
+            <option value="y">Mirror ↕</option>
+            <option value="xy">Mirror ↔ + ↕ (4-way)</option>
+            <option value="rot4">Rotate 4-way</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Yarn palette</h2>
+      <div class="body">
+        <div class="swatches" id="swatches"></div>
+        <div class="palette-tools stack">
+          <div class="row">
+            <input type="color" id="colorEdit" value="#cc4477" title="Edit selected colour">
+            <input type="text" id="colorName" placeholder="Colour name" style="flex:1;">
+          </div>
+          <div class="row">
+            <button id="addColor" style="flex:1;">+ Add</button>
+            <button id="delColor" class="ghost">Remove</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Grid</h2>
+      <div class="body stack">
+        <label class="fld">Resolution
+          <select id="resSelect">
+            <option value="10">10 × 10  (20 cm cells)</option>
+            <option value="20">20 × 20  (10 cm cells)</option>
+            <option value="25">25 × 25  (8 cm cells)</option>
+            <option value="40">40 × 40  (5 cm cells)</option>
+            <option value="50">50 × 50  (4 cm cells)</option>
+            <option value="60">60 × 60  (3.3 cm cells)</option>
+            <option value="80">80 × 80  (2.5 cm cells)</option>
+            <option value="100">100 × 100  (2 cm cells)</option>
+            <option value="150">150 × 150  (1.3 cm cells)</option>
+            <option value="200" selected>200 × 200  (1 cm cells)</option>
+          </select>
+        </label>
+        <label class="row" style="gap:6px;font-size:12px;color:var(--ink-soft);">
+          <input type="checkbox" id="showGrid" checked> Show gridlines
+        </label>
+        <div class="row">
+          <button id="undoBtn" disabled>↶ Undo</button>
+          <button id="redoBtn" disabled>↷ Redo</button>
+        </div>
+        <button id="clearBtn" class="ghost">Clear design</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Import a print</h2>
+      <div class="body stack">
+        <button id="importBtn">📷 Choose image…</button>
+        <button id="importLogo" class="ghost">🐭 Use Klättermusens logo</button>
+        <input type="file" id="imgInput" accept="image/*" hidden>
+        <div class="row">
+          <label class="fld" style="flex:1;">Detail
+            <select id="importRes">
+              <option value="60">60 × 60</option>
+              <option value="80">80 × 80</option>
+              <option value="100">100 × 100</option>
+              <option value="150">150 × 150</option>
+              <option value="200" selected>200 × 200 (1cm)</option>
+            </select>
+          </label>
+          <label class="fld" style="flex:1;">Max colours
+            <input type="number" id="importColors" value="4" min="1" max="40">
+          </label>
+        </div>
+        <label class="row" style="gap:6px;font-size:12px;color:var(--ink-soft);">
+          <input type="checkbox" id="importInvert"> Treat as line art (keep dark lines crisp)
+        </label>
+        <div class="note">Maps the image onto the grid in the nearest yarn colours. For a logo like a line drawing, tick “line art” and keep Max colours low (2–4).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CENTER: views -->
+  <div class="stage">
+    <div class="tabs" id="tabs">
+      <button data-view="design" class="active">Design</button>
+      <button data-view="preview">Tufted preview</button>
+      <button data-view="studio">In studio</button>
+    </div>
+
+    <!-- design -->
+    <div class="view show" id="view-design">
+      <div class="canvas-wrap">
+        <canvas id="designCanvas" width="560" height="560"></canvas>
+      </div>
+      <div class="meta">Click &amp; drag to paint · scale guide shows real size</div>
+    </div>
+
+    <!-- preview -->
+    <div class="view" id="view-preview">
+      <div class="canvas-wrap">
+        <canvas id="previewCanvas" width="640" height="640"></canvas>
+      </div>
+      <div class="meta">Simulated wool pile · this is how the tufted rug reads from a few steps back</div>
+    </div>
+
+    <!-- in room / studio -->
+    <div class="view" id="view-studio">
+      <div class="row" style="justify-content:center; margin-bottom:2px;">
+        <label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Scene
+          <select id="bgSelect" style="width:auto;">
+            <option value="room" selected>Gallery floor</option>
+            <option value="studio">Tufting studio (wall)</option>
+            <option value="custom">Uploaded photo…</option>
+          </select>
+        </label>
+        <button id="bgUpload" class="ghost">📷 Upload photo</button>
+        <input type="file" id="bgInput" accept="image/*" hidden>
+      </div>
+      <div class="studio-wrap" id="studioWrap">
+        <img class="bg" id="studioBg" src="room.jpg" alt="Scene">
+        <div id="studioWarp"><canvas id="studioCanvas" width="500" height="500"></canvas></div>
+        <div class="handle" data-corner="0"></div>
+        <div class="handle" data-corner="1"></div>
+        <div class="handle" data-corner="2"></div>
+        <div class="handle" data-corner="3"></div>
+      </div>
+      <div class="row" style="justify-content:center;">
+        <label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Opacity
+          <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:140px;">
+        </label>
+        <button id="resetCorners" class="ghost">Reset placement</button>
+      </div>
+      <div class="meta">Drag the four corners to lay the 2×2m rug onto the floor, then show the client.</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: estimate + export -->
+  <div class="stack">
+    <div class="panel">
+      <h2>Yarn estimate</h2>
+      <div class="body">
+        <table class="est-table" id="estTable"><tbody></tbody></table>
+        <div class="est-total" id="estTotal"></div>
+        <div class="row" style="margin-top:10px;">
+          <label class="fld" style="flex:1;">Density (kg/m²)
+            <input type="number" id="density" value="2.6" min="0.5" max="6" step="0.1">
+          </label>
+          <label class="fld" style="flex:1;">€ / cone
+            <input type="number" id="conePrice" value="17.5" min="0" step="0.5">
+          </label>
+        </div>
+        <div class="note">Cones = 500g (Tufting Europe NZ wool). Rough estimate for hand-tufted cut pile; tune density to your pile height. Colours match their orderable range.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Export &amp; save</h2>
+      <div class="body stack">
+        <button id="exportDesign">⬇︎ Design PNG (flat)</button>
+        <button id="exportTufted">⬇︎ Tufted PNG</button>
+        <button id="saveJson">💾 Save project (.json)</button>
+        <button id="loadJson">📂 Load project</button>
+        <input type="file" id="fileInput" accept="application/json" hidden>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Presets</h2>
+      <div class="body stack">
+        <button id="presetCheck" class="ghost">Checkerboard</button>
+        <button id="presetStripes" class="ghost">Stripes</button>
+        <button id="presetConcentric" class="ghost">Concentric squares</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- model ----------
+  const RUG_M = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rug-m')) || 2.0;
+  let N = 200;                         // grid cells per side (default 1cm tufts, matches yarn gauge)
+  let grid = [];                       // grid[y][x] = palette index, or -1 = empty
+  // Palette mirrors the Tufting Europe 100% NZ-wool range (500g cones, ~€17.50 each)
+  // so the yarn estimate maps straight to orderable cones. Hex values are close approximations.
+  let palette = [
+    {hex:'#f3f0e9', name:'White'},
+    {hex:'#e4dccb', name:'Light Beige'},
+    {hex:'#d6bd96', name:'Honey Beige'},
+    {hex:'#9a8f6b', name:'Khaki'},
+    {hex:'#b08a63', name:'Light Brown'},
+    {hex:'#8a5a37', name:'Maple Brown'},
+    {hex:'#4f3a2a', name:'Dark Brown'},
+    {hex:'#c9c6c0', name:'Light Grey'},
+    {hex:'#6d6d70', name:'Dark Grey'},
+    {hex:'#45454a', name:'Graphite Grey'},
+    {hex:'#1d1c1a', name:'Black'},
+    {hex:'#edc3a6', name:'Peachy Beige'},
+    {hex:'#e89a82', name:'Salmon'},
+    {hex:'#c8702f', name:'Ginger Orange'},
+    {hex:'#e8631f', name:'Orange Blast'},
+    {hex:'#f4361f', name:'Fluor Red'},
+    {hex:'#b81f2d', name:'Cherry Red'},
+    {hex:'#6e1f2a', name:'Bordeaux'},
+    {hex:'#c98e2b', name:'Ochre Yellow'},
+    {hex:'#d9a72b', name:'Mustard Yellow'},
+    {hex:'#f2c623', name:'Yellow'},
+    {hex:'#6f6f33', name:'Olive Green'},
+    {hex:'#6b8540', name:'Moss Green'},
+    {hex:'#2f5233', name:'Forest Green'},
+    {hex:'#234b3a', name:'Pine Green'},
+    {hex:'#1f7a78', name:'Teal'},
+    {hex:'#6fb3ad', name:'Light Teal'},
+    {hex:'#1fb0a8', name:'Turquoise'},
+    {hex:'#a9ddd6', name:'Light Aqua'},
+    {hex:'#a7cfe8', name:'Light Blue'},
+    {hex:'#6fb0de', name:'Sky Blue'},
+    {hex:'#5a7d99', name:'Steel Blue'},
+    {hex:'#2f5aa8', name:'Cobalt Blue'},
+    {hex:'#2c3b78', name:'Mid Indigo Blue'},
+    {hex:'#1e2a52', name:'Navy Blue'},
+    {hex:'#6a4ca0', name:'Violet'},
+    {hex:'#4a2f6b', name:'Dark Purple'},
+    {hex:'#4a2440', name:'Aubergine Purple'},
+    {hex:'#d44d8a', name:'Deep Pink'},
+    {hex:'#c0357f', name:'Fuchsia Pink'},
+    {hex:'#ecc0d2', name:'Light Pink'},
+  ];
+  const CONE_G = 500;        // grams per cone (Tufting Europe)
+  let conePrice = 17.5;      // € per cone
+  let selColor = 4;
+  let tool = 'brush';
+  let brush = 1;
+  let symmetry = 'none';
+  let showGrid = true;
+
+  const undoStack = [], redoStack = [];
+
+  function blankGrid(n){ return Array.from({length:n}, () => new Array(n).fill(-1)); }
+
+  function resampleGrid(oldGrid, oldN, newN){
+    const g = blankGrid(newN);
+    for (let y=0;y<newN;y++) for (let x=0;x<newN;x++){
+      const sx = Math.floor(x * oldN / newN), sy = Math.floor(y * oldN / newN);
+      g[y][x] = oldGrid[sy][sx];
+    }
+    return g;
+  }
+
+  // ---------- elements ----------
+  const $ = s => document.querySelector(s);
+  const designCanvas = $('#designCanvas'), dctx = designCanvas.getContext('2d');
+  const previewCanvas = $('#previewCanvas'), pctx = previewCanvas.getContext('2d');
+  const studioCanvas = $('#studioCanvas'), sctx = studioCanvas.getContext('2d');
+
+  // ---------- history ----------
+  function snapshot(){ return JSON.stringify(grid); }
+  function pushHistory(){ undoStack.push(snapshot()); if (undoStack.length>120) undoStack.shift(); redoStack.length=0; updateUndo(); }
+  function updateUndo(){ $('#undoBtn').disabled = !undoStack.length; $('#redoBtn').disabled = !redoStack.length; }
+  function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); grid = JSON.parse(undoStack.pop()); afterEdit(); updateUndo(); }
+  function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); grid = JSON.parse(redoStack.pop()); afterEdit(); updateUndo(); }
+
+  // ---------- painting ----------
+  function applySymmetry(x,y){
+    const m = N-1, pts = [[x,y]];
+    if (symmetry==='x' || symmetry==='xy') pts.push([m-x, y]);
+    if (symmetry==='y' || symmetry==='xy') pts.push([x, m-y]);
+    if (symmetry==='xy') pts.push([m-x, m-y]);
+    if (symmetry==='rot4'){ pts.push([m-y, x]); pts.push([m-x, m-y]); pts.push([y, m-x]); }
+    return pts;
+  }
+
+  function paintCell(cx, cy, value){
+    const r = brush-1;
+    for (let dy=-r; dy<=r; dy++) for (let dx=-r; dx<=r; dx++){
+      const x = cx+dx, y = cy+dy;
+      if (x<0||y<0||x>=N||y>=N) continue;
+      if (dx*dx+dy*dy > (r+0.4)*(r+0.4)) continue; // round-ish brush
+      for (const [px,py] of applySymmetry(x,y)){
+        if (px>=0&&py>=0&&px<N&&py<N) grid[py][px] = value;
+      }
+    }
+  }
+
+  function floodFill(cx, cy, value){
+    const target = grid[cy][cx];
+    if (target === value) return;
+    const stack = [[cx,cy]];
+    while (stack.length){
+      const [x,y] = stack.pop();
+      if (x<0||y<0||x>=N||y>=N) continue;
+      if (grid[y][x] !== target) continue;
+      grid[y][x] = value;
+      stack.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]);
+    }
+  }
+
+  // ---------- rendering: design grid ----------
+  function cellPx(){ return designCanvas.width / N; }
+
+  function drawDesign(){
+    const s = cellPx(), w = designCanvas.width;
+    dctx.clearRect(0,0,w,w);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+      const v = grid[y][x];
+      dctx.fillStyle = v<0 ? '#fbfaf7' : palette[v].hex;
+      dctx.fillRect(x*s, y*s, Math.ceil(s), Math.ceil(s));
+    }
+    if (showGrid){
+      // fine per-tuft gridlines only when cells are big enough to read
+      if (s >= 8){
+        dctx.strokeStyle = 'rgba(0,0,0,.10)'; dctx.lineWidth = 1; dctx.beginPath();
+        for (let i=0;i<=N;i++){ const p=Math.round(i*s)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
+        dctx.stroke();
+      }
+      // 5 cm guidelines in yellow, mirroring the woven Tufting Europe cloth (200cm / 40 = 5cm)
+      const g = w/40;
+      dctx.strokeStyle = 'rgba(212,175,38,.6)'; dctx.lineWidth = 1; dctx.beginPath();
+      for (let i=0;i<=40;i++){ const p=Math.round(i*g)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
+      dctx.stroke();
+    }
+    // border
+    dctx.strokeStyle = 'rgba(0,0,0,.35)'; dctx.lineWidth = 2;
+    dctx.strokeRect(1,1,w-2,w-2);
+  }
+
+  // ---------- rendering: tufted preview ----------
+  // tiny seeded PRNG so the texture is stable per render
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function shade(hex, amt){
+    const n = parseInt(hex.slice(1),16);
+    let r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+    r=Math.max(0,Math.min(255,r+amt)); g=Math.max(0,Math.min(255,g+amt)); b=Math.max(0,Math.min(255,b+amt));
+    return `rgb(${r|0},${g|0},${b|0})`;
+  }
+
+  function drawTufted(ctx, sizePx){
+    const w = sizePx, s = w / N;
+    ctx.clearRect(0,0,w,w);
+    // soft fabric base
+    ctx.fillStyle = '#efece6'; ctx.fillRect(0,0,w,w);
+    // empty-state: nothing painted yet
+    let any=false; for(let y=0;y<N&&!any;y++) for(let x=0;x<N;x++) if(grid[y][x]>=0){any=true;break;}
+    if (!any){
+      ctx.strokeStyle='#d8d2c7'; ctx.lineWidth=Math.max(2,w*0.004); ctx.setLineDash([w*0.02,w*0.02]);
+      ctx.strokeRect(w*0.08,w*0.08,w*0.84,w*0.84); ctx.setLineDash([]);
+      ctx.fillStyle='#b3ada2'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font=`600 ${Math.round(w*0.032)}px -apple-system,Helvetica,Arial,sans-serif`;
+      ctx.fillText('Nothing painted yet', w/2, w/2 - w*0.022);
+      ctx.font=`${Math.round(w*0.024)}px -apple-system,Helvetica,Arial,sans-serif`;
+      ctx.fillText('Paint cells in the Design tab — they appear here as wool pile', w/2, w/2 + w*0.028);
+      return;
+    }
+    const rnd = mulberry32(12345 + N*7);
+    const tuft = Math.max(2, s/4);          // size of each yarn stitch
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+      const v = grid[y][x];
+      if (v<0) continue;
+      const hex = palette[v].hex;
+      ctx.fillStyle = hex;
+      ctx.fillRect(x*s, y*s, s+0.6, s+0.6);
+      // pile: short random strokes, lighter & darker, for a wool look.
+      // tiny cells (high-res grids) need far fewer strokes to stay fast.
+      const strokes = s < 5 ? 2 : (s < 9 ? 5 : Math.max(6, (s*s)/(tuft*tuft) * 1.6));
+      for (let i=0;i<strokes;i++){
+        const px = x*s + rnd()*s, py = y*s + rnd()*s;
+        const len = tuft*(0.7+rnd()*0.8), ang = -1.0 - rnd()*0.6; // mostly up-left, like brushed pile
+        const lift = (rnd()*54)-22;
+        ctx.strokeStyle = shade(hex, lift);
+        ctx.lineWidth = Math.max(1, tuft*0.55);
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(px,py);
+        ctx.lineTo(px+Math.cos(ang)*len, py+Math.sin(ang)*len);
+        ctx.stroke();
+      }
+    }
+    // grooves between colour blocks (subtle pile separation), only where colour changes
+    ctx.lineWidth = Math.max(1, s*0.06);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+      const v = grid[y][x]; if (v<0) continue;
+      if (x<N-1 && grid[y][x+1]!==v){ ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.beginPath(); ctx.moveTo((x+1)*s,y*s); ctx.lineTo((x+1)*s,(y+1)*s); ctx.stroke(); }
+      if (y<N-1 && grid[y+1][x]!==v){ ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.beginPath(); ctx.moveTo(x*s,(y+1)*s); ctx.lineTo((x+1)*s,(y+1)*s); ctx.stroke(); }
+    }
+    // soft vignette + bound edge
+    const g = ctx.createRadialGradient(w/2,w/2,w*0.2, w/2,w/2,w*0.72);
+    g.addColorStop(0,'rgba(255,255,255,0)'); g.addColorStop(1,'rgba(0,0,0,.08)');
+    ctx.fillStyle = g; ctx.fillRect(0,0,w,w);
+    ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = Math.max(2, s*0.25);
+    ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, w-ctx.lineWidth, w-ctx.lineWidth);
+  }
+
+  // ---------- studio overlay (perspective warp via matrix3d) ----------
+  // Scenes: each has its own default rug placement (corners TL,TR,BR,BL as image fractions)
+  // and CSS blend. 'room' lays the rug flat on the floor; 'studio' maps it onto the wall cloth.
+  const BG = {
+    room:   { src:'room.jpg',   blend:'normal',
+              corners:[ {x:0.400,y:0.600}, {x:0.640,y:0.600}, {x:0.720,y:0.850}, {x:0.300,y:0.850} ] },
+    studio: { src:'studio.jpg', blend:'multiply',
+              corners:[ {x:0.322,y:0.360}, {x:0.713,y:0.360}, {x:0.720,y:0.662}, {x:0.326,y:0.668} ] },
+    custom: { src:'',           blend:'normal',
+              corners:[ {x:0.30,y:0.42}, {x:0.70,y:0.42}, {x:0.74,y:0.80}, {x:0.26,y:0.80} ] },
+  };
+  let bgKey = 'room';
+  let corners = JSON.parse(JSON.stringify(BG[bgKey].corners));
+
+  // Canonical 4-corner perspective warp (matrix3d-from-quad), correct for any aspect ratio.
+  function adj(m){ return [ m[4]*m[8]-m[5]*m[7], m[2]*m[7]-m[1]*m[8], m[1]*m[5]-m[2]*m[4],
+    m[5]*m[6]-m[3]*m[8], m[0]*m[8]-m[2]*m[6], m[2]*m[3]-m[0]*m[5],
+    m[3]*m[7]-m[4]*m[6], m[1]*m[6]-m[0]*m[7], m[0]*m[4]-m[1]*m[3] ]; }
+  function multmm(a,b){ const c=new Array(9); for(let i=0;i<3;i++)for(let j=0;j<3;j++){let s=0;for(let k=0;k<3;k++)s+=a[3*i+k]*b[3*k+j];c[3*i+j]=s;} return c; }
+  function multmv(m,v){ return [ m[0]*v[0]+m[1]*v[1]+m[2]*v[2], m[3]*v[0]+m[4]*v[1]+m[5]*v[2], m[6]*v[0]+m[7]*v[1]+m[8]*v[2] ]; }
+  function basisToPoints(x1,y1,x2,y2,x3,y3,x4,y4){
+    const m=[x1,x2,x3, y1,y2,y3, 1,1,1];
+    const v=multmv(adj(m),[x4,y4,1]);
+    return multmm(m,[v[0],0,0, 0,v[1],0, 0,0,v[2]]);
+  }
+  function general2DProjection(s,d){
+    const S=basisToPoints(s[0],s[1],s[2],s[3],s[4],s[5],s[6],s[7]);
+    const D=basisToPoints(d[0],d[1],d[2],d[3],d[4],d[5],d[6],d[7]);
+    return multmm(D, adj(S));
+  }
+  // corners c = [TL,TR,BR,BL] as image fractions; canvas element box is W×H px
+  function matFromCorners(W,H,c){
+    const d=[ c[0].x*W,c[0].y*H,  c[1].x*W,c[1].y*H,  c[3].x*W,c[3].y*H,  c[2].x*W,c[2].y*H ]; // TL,TR,BL,BR
+    const s=[ 0,0,  W,0,  0,H,  W,H ];                                                          // TL,TR,BL,BR
+    const t=general2DProjection(s,d);
+    for(let i=0;i<9;i++) t[i]/=t[8];
+    const m=[ t[0],t[3],0,t[6], t[1],t[4],0,t[7], 0,0,1,0, t[2],t[5],0,t[8] ];
+    return 'matrix3d('+m.join(',')+')';
+  }
+
+  function drawStudio(){
+    // render tufted design into a unit-sized square canvas, then warp it
+    const px = 500; studioCanvas.width = px; studioCanvas.height = px;
+    drawTufted(sctx, px);
+    const wrap = $('#studioWrap');
+    const W = wrap.clientWidth, H = wrap.clientHeight;
+    studioCanvas.style.width = W+'px'; studioCanvas.style.height = H+'px';
+    studioCanvas.style.transform = matFromCorners(W,H,corners);
+    studioCanvas.style.opacity = ($('#studioOpacity').value/100).toFixed(2);
+    $('#studioWarp').style.mixBlendMode = BG[bgKey].blend;
+    positionHandles();
+  }
+  function positionHandles(){
+    const wrap = $('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
+    document.querySelectorAll('.handle').forEach(h=>{
+      const c = corners[+h.dataset.corner];
+      h.style.left = (c.x*W)+'px'; h.style.top = (c.y*H)+'px';
+    });
+  }
+
+  // ---------- palette UI ----------
+  function renderSwatches(){
+    const counts = new Array(palette.length).fill(0);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    const wrap = $('#swatches'); wrap.innerHTML='';
+    palette.forEach((c,i)=>{
+      const d=document.createElement('div'); d.className='swatch'+(i===selColor?' sel':'');
+      d.style.background=c.hex; d.title=c.name;
+      if (counts[i]>0){ const s=document.createElement('span'); s.className='cnt'; s.textContent=counts[i]; d.appendChild(s); }
+      d.onclick=()=>{ selColor=i; tool = (tool==='erase'?'brush':tool); syncToolButtons(); refreshColorEditor(); renderSwatches(); };
+      wrap.appendChild(d);
+    });
+    refreshColorEditor();
+  }
+  function refreshColorEditor(){
+    if (selColor>=0 && palette[selColor]){ $('#colorEdit').value = palette[selColor].hex; $('#colorName').value = palette[selColor].name; }
+  }
+
+  // ---------- estimate ----------
+  function renderEstimate(){
+    const counts = new Array(palette.length).fill(0); let filled=0;
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
+    const cellArea = (RUG_M/N)*(RUG_M/N);           // m² per cell
+    const density = parseFloat($('#density').value)||2.6;
+    conePrice = parseFloat($('#conePrice').value)||0;
+    const tbody = $('#estTable').querySelector('tbody'); tbody.innerHTML='';
+    let totalCones=0;
+    palette.forEach((c,i)=>{
+      if (!counts[i]) return;
+      const area = counts[i]*cellArea;
+      const kg = area*density;
+      const cones = Math.ceil(kg*1000/CONE_G);       // whole 500g cones to order
+      totalCones += cones;
+      const tr=document.createElement('tr');
+      tr.innerHTML = `<td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
+                     `<td>${c.name}</td>`+
+                     `<td class="n">${kg.toFixed(2)} kg</td>`+
+                     `<td class="n">${cones}×</td>`;
+      tbody.appendChild(tr);
+    });
+    const totalArea = filled*cellArea, totalKg = totalArea*density;
+    const pct = Math.round(100*filled/(N*N));
+    const cost = totalCones*conePrice;
+    $('#estTotal').innerHTML = `Filled <strong>${pct}%</strong> · <strong>${totalKg.toFixed(1)} kg</strong> · `+
+      `<strong>${totalCones}</strong> cones ≈ <strong>€${cost.toFixed(0)}</strong>`;
+  }
+
+  // ---------- orchestration ----------
+  let activeView = 'design';
+  function afterEdit(){
+    drawDesign();
+    if (activeView==='preview') drawTufted(pctx, previewCanvas.width);
+    if (activeView==='studio') drawStudio();
+    renderSwatches();
+    renderEstimate();
+  }
+
+  function setView(v){
+    activeView=v;
+    document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+    ['design','preview','studio'].forEach(id=>$('#view-'+id).classList.toggle('show', id===v));
+    if (v==='preview') drawTufted(pctx, previewCanvas.width);
+    if (v==='studio') drawStudio();
+  }
+
+  function updateLabels(){
+    $('#dimLabel').textContent = `${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`;
+    $('#cellLabel').textContent = `${Math.round(RUG_M/N*100)} cm`;
+  }
+
+  // ---------- pointer handling on design canvas ----------
+  let painting=false, dirtied=false;
+  function canvasCell(e){
+    const r = designCanvas.getBoundingClientRect();
+    const x = Math.floor((e.clientX-r.left)/r.width*N);
+    const y = Math.floor((e.clientY-r.top)/r.height*N);
+    return [Math.max(0,Math.min(N-1,x)), Math.max(0,Math.min(N-1,y))];
+  }
+  function pointerDown(e){
+    e.preventDefault();
+    const [x,y]=canvasCell(e);
+    if (tool==='pick'){ const v=grid[y][x]; if(v>=0){selColor=v; renderSwatches();} return; }
+    pushHistory(); dirtied=true;
+    if (tool==='fill'){ floodFill(x,y, tool==='erase'?-1:selColor); afterEdit(); return; }
+    painting=true;
+    paintCell(x,y, tool==='erase'?-1:selColor);
+    afterEdit();
+  }
+  function pointerMove(e){
+    if(!painting) return;
+    const [x,y]=canvasCell(e);
+    paintCell(x,y, tool==='erase'?-1:selColor);
+    drawDesign(); // light redraw while dragging
+  }
+  function pointerUp(){ if(painting){ painting=false; renderSwatches(); renderEstimate(); } }
+
+  designCanvas.addEventListener('pointerdown', pointerDown);
+  designCanvas.addEventListener('pointermove', pointerMove);
+  window.addEventListener('pointerup', pointerUp);
+
+  // ---------- tool buttons ----------
+  function syncToolButtons(){
+    document.querySelectorAll('#toolSeg button, #toolSeg2 button').forEach(b=>b.classList.toggle('active', b.dataset.tool===tool));
+  }
+  document.querySelectorAll('#toolSeg button, #toolSeg2 button').forEach(b=>{
+    b.onclick=()=>{ tool=b.dataset.tool; syncToolButtons(); };
+  });
+  $('#brushSize').oninput = e => { brush=+e.target.value; $('#brushVal').textContent=brush; };
+  $('#symmetry').onchange = e => symmetry=e.target.value;
+  $('#showGrid').onchange = e => { showGrid=e.target.checked; drawDesign(); };
+
+  // ---------- palette buttons ----------
+  $('#colorEdit').oninput = e => { if(selColor>=0){ palette[selColor].hex=e.target.value; afterEdit(); } };
+  $('#colorName').onchange = e => { if(selColor>=0){ palette[selColor].name=e.target.value; renderSwatches(); renderEstimate(); } };
+  $('#addColor').onclick = () => {
+    palette.push({hex: $('#colorEdit').value || '#cc4477', name: $('#colorName').value || 'New colour'});
+    selColor = palette.length-1; renderSwatches();
+  };
+  $('#delColor').onclick = () => {
+    if (palette.length<=1) return;
+    const removed = selColor;
+    palette.splice(removed,1);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){ if(grid[y][x]===removed) grid[y][x]=-1; else if(grid[y][x]>removed) grid[y][x]--; }
+    selColor = Math.min(selColor, palette.length-1);
+    afterEdit();
+  };
+
+  // ---------- grid controls ----------
+  $('#resSelect').onchange = e => {
+    pushHistory();
+    const newN = +e.target.value;
+    grid = resampleGrid(grid, N, newN); N = newN;
+    updateLabels(); afterEdit();
+  };
+  $('#undoBtn').onclick = undo;
+  $('#redoBtn').onclick = redo;
+  $('#clearBtn').onclick = () => { pushHistory(); grid=blankGrid(N); afterEdit(); };
+
+  // ---------- tabs ----------
+  document.querySelectorAll('#tabs button').forEach(b=> b.onclick=()=>setView(b.dataset.view));
+
+  // ---------- studio handles ----------
+  $('#studioOpacity').oninput = drawStudio;
+  $('#resetCorners').onclick = ()=>{ corners=JSON.parse(JSON.stringify(BG[bgKey].corners)); drawStudio(); };
+
+  function setBackground(key){
+    bgKey = key;
+    const img = $('#studioBg');
+    const src = (key==='custom') ? BG.custom.src : BG[key].src;
+    corners = JSON.parse(JSON.stringify(BG[key].corners));
+    if (src){ img.onload = drawStudio; img.src = src; }
+    else { drawStudio(); }
+  }
+  $('#bgSelect').onchange = e => setBackground(e.target.value);
+  $('#bgUpload').onclick = ()=> $('#bgInput').click();
+  $('#bgInput').onchange = e => {
+    const f=e.target.files[0]; if(!f) return;
+    BG.custom.src = URL.createObjectURL(f);
+    $('#bgSelect').value = 'custom';
+    setBackground('custom');
+    e.target.value='';
+  };
+  (function bindHandles(){
+    let drag=null;
+    document.querySelectorAll('.handle').forEach(h=>{
+      h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; h.setPointerCapture(e.pointerId); });
+    });
+    document.addEventListener('pointermove', e=>{
+      if (drag===null) return;
+      const wrap=$('#studioWrap'); const r=wrap.getBoundingClientRect();
+      corners[drag] = { x: Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)), y: Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)) };
+      drawStudio();
+    });
+    document.addEventListener('pointerup', ()=> drag=null);
+  })();
+  window.addEventListener('resize', ()=>{ if(activeView==='studio') drawStudio(); });
+
+  // ---------- export / save ----------
+  function downloadCanvas(canvas, name){
+    canvas.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); });
+  }
+  $('#exportDesign').onclick = ()=>{
+    const c=document.createElement('canvas'); c.width=c.height=N*40; const x=c.getContext('2d');
+    const s=40; for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){ const v=grid[yy][xx]; x.fillStyle=v<0?'#ffffff':palette[v].hex; x.fillRect(xx*s,yy*s,s,s);}
+    downloadCanvas(c,'rug-design.png');
+  };
+  $('#exportTufted').onclick = ()=>{
+    const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png');
+  };
+  $('#saveJson').onclick = ()=>{
+    const data={ version:1, rug_m:RUG_M, N, palette, grid };
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+    a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href);
+  };
+  $('#loadJson').onclick = ()=> $('#fileInput').click();
+  $('#fileInput').onchange = e => {
+    const f=e.target.files[0]; if(!f) return; const rd=new FileReader();
+    rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; selColor=Math.min(selColor,palette.length-1); $('#resSelect').value=String(N); updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } };
+    rd.readAsText(f); e.target.value='';
+  };
+
+  // ---------- import a print → grid ----------
+  function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+  const palRgb = () => palette.map(c=>hexToRgb(c.hex));
+  function nearestIdx(r,g,b, rgbs, allow){
+    let best=allow?allow[0]:0, bd=Infinity;
+    const list = allow || rgbs.map((_,i)=>i);
+    for (const i of list){ const [pr,pg,pb]=rgbs[i]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=i;} }
+    return best;
+  }
+
+  function importImage(img){
+    const newN = +$('#importRes').value;
+    const maxColors = Math.max(1, Math.min(40, +$('#importColors').value||4));
+    const lineArt = $('#importInvert').checked;
+    pushHistory();
+    N = newN; $('#resSelect').value = String(N); updateLabels();
+
+    // fit image (contain) into an N×N sampling canvas over a detected background
+    const off = document.createElement('canvas'); off.width=off.height=N; const o=off.getContext('2d');
+    // detect background = average of the four corners (downscaled read)
+    const tc=document.createElement('canvas'); tc.width=tc.height=16; const t=tc.getContext('2d');
+    t.drawImage(img,0,0,16,16); const cd=t.getImageData(0,0,16,16).data;
+    const corners=[[0,0],[15,0],[0,15],[15,15]]; let br=0,bg=0,bb=0;
+    for(const [cx,cy] of corners){ const k=(cy*16+cx)*4; br+=cd[k];bg+=cd[k+1];bb+=cd[k+2]; }
+    br/=4;bg/=4;bb/=4;
+    o.fillStyle=`rgb(${br|0},${bg|0},${bb|0})`; o.fillRect(0,0,N,N);
+    const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+    const scale=Math.min(N/iw, N/ih); const dw=iw*scale, dh=ih*scale;
+    o.imageSmoothingEnabled=true;
+    o.drawImage(img, (N-dw)/2, (N-dh)/2, dw, dh);
+    const data=o.getImageData(0,0,N,N).data;
+    const rgbs=palRgb();
+
+    // assign nearest palette colour per cell
+    const tmp=blankGrid(N); const counts={};
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
+      const k=(y*N+x)*4; let r=data[k],g=data[k+1],b=data[k+2];
+      let idx;
+      if (lineArt){
+        const lum=0.299*r+0.587*g+0.114*b;
+        // dark pixels → nearest dark yarn; light → nearest to background
+        if (lum<128) idx = nearestIdx(r,g,b,rgbs);
+        else idx = nearestIdx(br,bg,bb,rgbs);
+      } else {
+        idx = nearestIdx(r,g,b,rgbs);
+      }
+      tmp[y][x]=idx; counts[idx]=(counts[idx]||0)+1;
+    }
+    // reduce to the maxColors most-used, remap the rest to nearest kept colour
+    const kept = Object.keys(counts).map(Number).sort((a,b)=>counts[b]-counts[a]).slice(0,maxColors);
+    const keptRgb = kept.map(i=>rgbs[i]);
+    const remap = {};
+    for (const i of Object.keys(counts).map(Number)){
+      if (kept.includes(i)) { remap[i]=i; continue; }
+      const [r,g,b]=rgbs[i];
+      let best=kept[0],bd=Infinity;
+      kept.forEach((ki,ji)=>{ const [pr,pg,pb]=keptRgb[ji]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=ki;} });
+      remap[i]=best;
+    }
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
+    grid=tmp;
+    afterEdit();
+    setView('preview');
+  }
+
+  $('#importBtn').onclick = ()=> $('#imgInput').click();
+  $('#importLogo').onclick = ()=>{
+    $('#importInvert').checked = true;            // it's line art
+    fetch('logo.png').then(r=>r.blob()).then(b=>{
+      const img=new Image(); img.onload=()=>importImage(img); img.src=URL.createObjectURL(b);
+    }).catch(()=>alert('logo.png not found next to index.html (serve via localhost).'));
+  };
+  $('#imgInput').onchange = e => {
+    const f=e.target.files[0]; if(!f) return;
+    const img=new Image();
+    img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); };
+    img.onerror=()=>alert('Could not load that image.');
+    img.src=URL.createObjectURL(f);
+    e.target.value='';
+  };
+
+  // ---------- presets ----------
+  $('#presetCheck').onclick = ()=>{ pushHistory(); const a=selColor, b=(selColor+5)%palette.length; const blk=Math.max(1,Math.round(N/5));
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++) grid[y][x] = ((Math.floor(x/blk)+Math.floor(y/blk))%2)? a : b; afterEdit(); };
+  $('#presetStripes').onclick = ()=>{ pushHistory(); const band=Math.max(1,Math.round(N/8));
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++) grid[y][x] = (Math.floor(y/band))%2? selColor : (selColor+4)%palette.length; afterEdit(); };
+  $('#presetConcentric').onclick = ()=>{ pushHistory();
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const ring=Math.min(x,y,N-1-x,N-1-y); grid[y][x]=(ring + selColor)%palette.length; } afterEdit(); };
+
+  // ---------- keyboard ----------
+  window.addEventListener('keydown', e=>{
+    if (e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return;
+    if ((e.metaKey||e.ctrlKey) && e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+    const k=e.key.toLowerCase();
+    if (k==='b'){tool='brush';syncToolButtons();}
+    else if (k==='f'){tool='fill';syncToolButtons();}
+    else if (k==='i'){tool='pick';syncToolButtons();}
+    else if (k==='e'){tool='erase';syncToolButtons();}
+  });
+  $('#density').oninput = renderEstimate;
+  $('#conePrice').oninput = renderEstimate;
+
+  // ---------- init ----------
+  grid = blankGrid(N);
+  updateLabels();
+  syncToolButtons();
+  afterEdit();
+  setView('design');
+})();
+</script>
+</body>
+</html>
