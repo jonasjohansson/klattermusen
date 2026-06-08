@@ -3,259 +3,229 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TuftView — tufted rug preview</title>
+<title>Klättermusens Verkstad — tufted rug preview</title>
 <style>
   :root {
     --rug-m: 2.0;
-    --bg: #f4f1ec;
+    --bg: #ece8e1;
     --panel: #ffffff;
-    --ink: #2c2a26;
-    --ink-soft: #6f6a61;
-    --line: #d8d2c7;
-    --line-soft: #e8e3d9;
+    --fg: #2c2a26;
+    --muted: #8c877d;
+    --border: #d8d2c7;
+    --hover: #f0ece4;
     --accent: #b4502e;
-    --accent-soft: #f0e2db;
-    --radius: 10px;
-    --gap: 14px;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 16px rgba(0,0,0,.05);
+    --radius: 4px;
+    --ctrl: 30px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; min-height: 100%; }
-  body { font-family: var(--font); color: var(--ink); background: var(--bg); font-size: 14px; -webkit-font-smoothing: antialiased; }
+  html, body { margin: 0; height: 100%; }
+  body { font-family: var(--font); color: var(--fg); background: var(--bg); font-size: 13px; display: flex; flex-direction: column; height: 100vh; overflow: hidden; -webkit-font-smoothing: antialiased; }
 
-  header { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; padding: 11px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
-  header h1 { font-size: 16px; margin: 0; font-weight: 650; letter-spacing: .2px; }
-  header h1 b { color: var(--accent); font-weight: 650; }
-  header .dims { color: var(--ink-soft); font-size: 12px; }
-  header .dims strong { color: var(--ink); font-weight: 600; }
-  header .spacer { flex: 1; }
+  /* header */
+  header { display: flex; align-items: center; gap: 18px; padding: 0 14px; height: 46px; border-bottom: 1px solid var(--border); background: var(--panel); flex: 0 0 auto; }
+  .brand { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg); }
+  .tabs { display: inline-flex; gap: 16px; }
+  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 3px 1px; color: var(--muted); font: inherit; cursor: pointer; }
+  .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
+  .spacer { flex: 1; }
+  .dims { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .03em; }
+  .dims strong { color: var(--fg); font-weight: 600; }
 
-  .tabs { display: inline-flex; gap: 4px; background: var(--line-soft); padding: 4px; border-radius: 9px; }
-  .tabs button { background: transparent; border: 0; padding: 7px 16px; border-radius: 6px; color: var(--ink-soft); font: inherit; font-size: 13px; cursor: pointer; }
-  .tabs button.active { background: #fff; color: var(--ink); box-shadow: var(--shadow); font-weight: 600; }
+  /* minimal controls */
+  button, .menu > summary {
+    font: inherit; font-size: 12px; padding: 6px 10px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--fg); border-radius: var(--radius); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; list-style: none;
+  }
+  button:hover, .menu > summary:hover { border-color: var(--fg); }
+  button.primary { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+  button.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
+  button:disabled { opacity: .3; cursor: default; border-color: var(--border); }
+  select, input[type="number"], input[type="text"] { font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); color: var(--fg); }
+  input[type="range"] { accent-color: var(--fg); vertical-align: middle; }
+  .note { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .hbar { display: flex; align-items: center; gap: 7px; }
 
+  .menu { position: relative; }
+  .menu > summary::-webkit-details-marker { display: none; }
+  .menu[open] > summary { border-color: var(--fg); }
+  .menu .menu-pop { position: absolute; right: 0; top: calc(100% + 6px); width: 210px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 26px rgba(0,0,0,.14); padding: 11px; z-index: 60; display: flex; flex-direction: column; gap: 10px; }
+  .menu .menu-pop label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
+  .menu .menu-pop .inline { flex-direction: row; align-items: center; gap: 7px; }
+
+  /* tab panes */
   .tabpane { display: none; }
-  .tabpane.show { display: block; }
+  .tabpane.show { display: flex; flex: 1; min-height: 0; }
+  #tab-estimate.show { display: block; overflow: auto; }
 
-  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .panel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .9px; color: var(--ink-soft); margin: 0; padding: 13px 15px 9px; font-weight: 700; }
-  .panel .body { padding: 0 15px 15px; }
-  .stack > * + * { margin-top: 10px; }
+  /* two-view workspace */
+  #views { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--split, 56%) 1fr; position: relative; background: var(--bg); }
+  .view { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 10px; }
+  .view + .view { border-left: 1px solid var(--border); }
+  .view-splitter { position: absolute; top: 0; bottom: 0; left: var(--split, 56%); width: 14px; transform: translateX(-50%); cursor: col-resize; z-index: 8; touch-action: none; }
+  .view-splitter::before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--border); transform: translateX(-50%); }
+  .view-splitter:hover::before, .view-splitter.drag::before { background: var(--fg); width: 2px; }
 
-  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  label.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-soft); }
-  select, input[type="number"], input[type="text"] { font: inherit; font-size: 13px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); width: 100%; }
-  button { font: inherit; font-size: 13px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; transition: background .12s, border-color .12s; }
-  button:hover { background: var(--accent-soft); border-color: var(--accent); }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover { filter: brightness(1.05); }
-  button.ghost { background: transparent; }
-  button:disabled { opacity: .4; cursor: default; background: #fff; border-color: var(--line); }
-  input[type="range"] { width: 100%; accent-color: var(--accent); }
-  .note { font-size: 11px; color: var(--ink-soft); line-height: 1.5; }
-
-  details.adv { border-top: 1px solid var(--line-soft); padding-top: 8px; }
-  details.adv > summary { cursor: pointer; font-size: 12px; color: var(--ink-soft); list-style: none; user-select: none; }
-  details.adv > summary::-webkit-details-marker { display: none; }
-  details.adv > summary::before { content: "▸ "; }
-  details.adv[open] > summary::before { content: "▾ "; }
-  details.adv .body { padding-top: 10px; }
-
-  /* ---- workspace layout ---- */
-  .ws { display: grid; grid-template-columns: 300px 1fr; gap: var(--gap); padding: var(--gap); align-items: start; }
-  @media (max-width: 1000px) { .ws { grid-template-columns: 1fr; } }
-  .viewrow { display: flex; align-items: flex-start; }
-  .pane { min-width: 90px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; }
-  .pane-h { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--ink-soft); font-weight: 700; margin-bottom: 9px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-  .pane-h .sub { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink); }
-  .pane > canvas { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; background: #fbfaf7; display: block; }
-  .splitter { align-self: stretch; flex: 0 0 14px; cursor: col-resize; display: flex; align-items: center; justify-content: center; touch-action: none; }
-  .splitter::after { content: ''; width: 4px; height: 48px; border-radius: 2px; background: var(--line); transition: background .12s; }
-  .splitter:hover::after, .splitter.drag::after { background: var(--accent); }
-  canvas { display: block; touch-action: none; }
-  .scene-controls { margin-top: 10px; }
-
-  /* curtain compare (artwork ⇄ tufted) */
-  .compare { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #fbfaf7; --cx: 50%; cursor: ew-resize; touch-action: none; }
-  .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-  #designCanvas { clip-path: inset(0 calc(100% - var(--cx)) 0 0); }   /* flat artwork on the left of the curtain */
-  .curtain { position: absolute; top: 0; bottom: 0; left: var(--cx); width: 0; pointer-events: none; }
-  .curtain-line { position: absolute; top: 0; bottom: 0; left: -1px; width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
-  .curtain-grip { position: absolute; top: 50%; left: -14px; width: 28px; height: 28px; transform: translateY(-50%); border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
-  .clabel { position: absolute; bottom: 8px; font-size: 10px; background: rgba(0,0,0,.45); color: #fff; padding: 2px 6px; border-radius: 4px; pointer-events: none; letter-spacing: .3px; }
-  .clabel.left { left: 8px; } .clabel.right { right: 8px; }
-
-  /* ---- recolour ---- */
-  .rc-used { display: flex; flex-wrap: wrap; gap: 10px; }
-  .rc-used .item { width: 62px; text-align: center; cursor: pointer; }
-  .rc-used .item .sw { width: 46px; height: 46px; border-radius: 9px; margin: 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); border: 2px solid transparent; }
-  .rc-used .item.sel .sw { border-color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
-  .rc-used .item .nm { font-size: 10px; color: var(--ink-soft); margin-top: 4px; line-height: 1.2; }
-  .rc-used .item.sel .nm { color: var(--ink); font-weight: 600; }
-
-  .rc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; max-height: 232px; overflow-y: auto; padding-right: 2px; }
-  .rc-pick .opt { display: flex; align-items: center; gap: 7px; padding: 4px 5px; border-radius: 6px; cursor: pointer; }
-  .rc-pick .opt:hover { background: var(--accent-soft); }
-  .rc-pick .opt.sel { outline: 2px solid var(--ink); }
-  .rc-pick .opt .chip { width: 18px; height: 18px; border-radius: 4px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
-  .rc-pick .opt .nm { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rc-hex { width: 34px; height: 30px; padding: 2px; border-radius: 6px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
-  .dropbtn .chip { width: 16px; height: 16px; border-radius: 4px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
-
-  .popover { position: fixed; z-index: 50; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 34px rgba(0,0,0,.20); padding: 11px; width: 286px; }
-  .popover h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--ink-soft); margin: 0 0 9px; font-weight: 700; }
-
-  /* ---- studio scene ---- */
-  .studio-wrap { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.10); }
-  .studio-wrap img.bg { width: 100%; display: block; }
-  #studioWarp { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+  .studio-wrap { position: relative; overflow: hidden; }
+  .studio-wrap img.bg { width: 100%; height: 100%; display: block; }
+  #studioWarp { position: absolute; inset: 0; pointer-events: none; }
   #studioWarp canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
-  .handle { position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); cursor: grab; touch-action: none; z-index: 5; }
+  .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: grab; touch-action: none; z-index: 5; }
   .handle:active { cursor: grabbing; }
-  .meta { color: var(--ink-soft); font-size: 12px; text-align: center; }
+  canvas { display: block; touch-action: none; }
 
-  /* ---- estimate ---- */
-  .est-wrap { max-width: 520px; margin: var(--gap) auto; }
+  /* curtain compare */
+  .compare { position: relative; overflow: hidden; background: #fbfaf7; --cx: 50%; cursor: ew-resize; touch-action: none; }
+  .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #designCanvas { clip-path: inset(0 calc(100% - var(--cx)) 0 0); }
+  .curtain { position: absolute; top: 0; bottom: 0; left: var(--cx); width: 0; pointer-events: none; z-index: 4; }
+  .curtain-line { position: absolute; top: 0; bottom: 0; left: -0.5px; width: 1px; background: var(--fg); }
+  .curtain-grip { position: absolute; top: 50%; left: -11px; width: 22px; height: 22px; transform: translateY(-50%); border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
+  .clabel { position: absolute; top: 8px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); pointer-events: none; }
+  .clabel.left { left: 10px; } .clabel.right { right: 10px; }
+
+  /* floating overlays on the imagery — transparent, controls carry their own chrome */
+  .ov { position: absolute; z-index: 6; display: flex; gap: 6px; align-items: center; }
+  .ov.tl { top: 10px; left: 10px; flex-wrap: wrap; max-width: calc(100% - 20px); }
+  .ov.tr { top: 10px; right: 10px; }
+  .ov.bl { bottom: 10px; left: 10px; flex-wrap: wrap; max-width: calc(100% - 20px); }
+  .ov .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: rgba(255,255,255,.7); padding: 2px 4px; border-radius: 3px; }
+  .ov select, .ov input[type="number"], .ov button { background: var(--panel); }
+  .ov input[type="number"] { width: 46px; }
+  .ov input[type="range"] { width: 78px; }
+  .ov .grp { display: flex; gap: 5px; align-items: center; background: rgba(255,255,255,.82); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 7px; }
+  .ov .grp .lbl { background: none; padding: 0; }
+
+  /* recolour rail — small swatches, names live in the popover */
+  .rc-sw { width: var(--ctrl); height: var(--ctrl); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
+  .rc-sw:hover { border-color: var(--fg); }
+  .ov.tl .iconbtn, .rc-tool { width: var(--ctrl); height: var(--ctrl); padding: 0; font-size: 13px; }
+
+  /* popover (named yarns) */
+  .popover { position: fixed; z-index: 70; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 10px; width: 280px; }
+  .popover h3 { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 9px; font-weight: 600; }
+  .rc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; max-height: 240px; overflow-y: auto; }
+  .rc-pick .opt { display: flex; align-items: center; gap: 7px; padding: 4px 5px; border-radius: 3px; cursor: pointer; }
+  .rc-pick .opt:hover { background: var(--hover); }
+  .rc-pick .opt.sel { outline: 1px solid var(--fg); }
+  .rc-pick .opt .chip { width: 16px; height: 16px; border-radius: 3px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  .rc-pick .opt .nm { font-size: 11px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc-hex { width: 30px; height: 26px; padding: 2px; border-radius: 3px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
+
+  /* estimate */
+  .est-wrap { max-width: 520px; margin: 28px auto; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .est-wrap h2 { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; }
   .est-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .est-table td { padding: 5px 3px; border-bottom: 1px solid var(--line-soft); }
+  .est-table td { padding: 5px 3px; border-bottom: 1px solid var(--hover); }
   .est-table td.c { width: 18px; }
-  .est-table td .dot { width: 16px; height: 16px; border-radius: 4px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
-  .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
-  .est-total { font-size: 13px; margin-top: 10px; color: var(--ink-soft); }
-  .est-total strong { color: var(--ink); }
+  .est-table td .dot { width: 16px; height: 16px; border-radius: 3px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+  .est-total { font-size: 13px; margin-top: 12px; color: var(--muted); }
+  .est-total strong { color: var(--fg); }
+  .est-wrap .row { display: flex; gap: 12px; margin-top: 16px; }
+  .est-wrap label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); flex: 1; }
 </style>
 </head>
 <body>
 <header>
-  <h1><b>TuftView</b></h1>
+  <span class="brand">Klättermusen</span>
   <div class="tabs" id="apptabs">
     <button data-tab="workspace" class="active">Workspace</button>
-    <button data-tab="estimate">Yarn estimate</button>
+    <button data-tab="estimate">Yarn</button>
   </div>
   <div class="spacer"></div>
-  <div class="dims">Rug <strong id="dimLabel">2.0 × 2.0 m</strong> · <strong id="cellLabel">5 mm</strong> tufts</div>
+  <div class="hbar">
+    <button id="importBtn">Upload</button>
+    <button id="importLogo">Logo</button>
+    <input type="file" id="imgInput" accept="image/*" hidden>
+    <details class="menu"><summary>Import</summary>
+      <div class="menu-pop">
+        <label>Detail
+          <select id="importRes">
+            <option value="100">100 × 100</option>
+            <option value="200">200 × 200</option>
+            <option value="300">300 × 300</option>
+            <option value="400" selected>400 × 400 · 5mm</option>
+            <option value="500">500 × 500 · 4mm</option>
+          </select>
+        </label>
+        <label>Max colours <input type="number" id="importColors" value="4" min="1" max="40"></label>
+        <label class="inline"><input type="checkbox" id="importInvert" checked> Line art</label>
+        <div class="note">Maps artwork onto the 2×2m grid in the nearest yarns. Keep colours low (2–4) for line art.</div>
+      </div>
+    </details>
+    <details class="menu"><summary>Export</summary>
+      <div class="menu-pop">
+        <button id="exportTufted">Tufted PNG</button>
+        <button id="exportDesign">Flat PNG</button>
+        <button id="saveJson">Save .json</button>
+        <button id="loadJson">Load project</button>
+        <input type="file" id="fileInput" accept="application/json" hidden>
+      </div>
+    </details>
+  </div>
+  <div class="dims">Rug <strong id="dimLabel">2.0 × 2.0 m</strong> · <strong id="cellLabel">5 mm</strong></div>
 </header>
 
 <!-- ===================== WORKSPACE ===================== -->
 <section id="tab-workspace" class="tabpane show">
-  <div class="ws">
+  <div id="views">
 
-    <!-- LEFT: controls -->
-    <div class="stack">
-      <div class="panel">
-        <h2>Artwork</h2>
-        <div class="body stack">
-          <button id="importBtn" class="primary">📷 Upload artwork…</button>
-          <button id="importLogo" class="ghost">🐭 Klättermusens logo</button>
-          <input type="file" id="imgInput" accept="image/*" hidden>
-          <details class="adv">
-            <summary>Import settings</summary>
-            <div class="body stack">
-              <div class="row">
-                <label class="fld" style="flex:1;">Detail
-                  <select id="importRes">
-                    <option value="100">100 × 100</option>
-                    <option value="200">200 × 200</option>
-                    <option value="300">300 × 300</option>
-                    <option value="400" selected>400 × 400 (5mm)</option>
-                    <option value="500">500 × 500 (4mm)</option>
-                  </select>
-                </label>
-                <label class="fld" style="flex:1;">Max colours
-                  <input type="number" id="importColors" value="4" min="1" max="40">
-                </label>
-              </div>
-              <label class="row" style="gap:6px;font-size:12px;color:var(--ink-soft);">
-                <input type="checkbox" id="importInvert" checked> Line art (keep dark lines crisp)
-              </label>
-              <div class="note">Artwork is mapped onto the 2×2m grid in the nearest yarn colours. For a line drawing keep Max colours low (2–4).</div>
-            </div>
-          </details>
-        </div>
-      </div>
+    <!-- ROOM -->
+    <div class="view" id="paneRoom">
+      <div class="studio-wrap" id="studioWrap">
+        <img class="bg" id="studioBg" src="room.jpg" alt="Scene">
+        <div id="studioWarp"><canvas id="studioCanvas" width="500" height="500"></canvas></div>
+        <div class="handle" data-corner="0"></div>
+        <div class="handle" data-corner="1"></div>
+        <div class="handle" data-corner="2"></div>
+        <div class="handle" data-corner="3"></div>
 
-      <div class="panel">
-        <h2>Recolour</h2>
-        <div class="body">
-          <div id="recolourList" class="stack"></div>
-        </div>
-      </div>
+        <!-- recolour rail (top-left) -->
+        <div class="ov tl" id="recolourList"></div>
 
-      <div class="panel">
-        <h2>Export</h2>
-        <div class="body stack">
-          <button id="exportTufted">⬇︎ Tufted PNG</button>
-          <div class="row">
-            <button id="exportDesign" class="ghost" style="flex:1;">Flat PNG</button>
-            <button id="saveJson" class="ghost" style="flex:1;">Save .json</button>
+        <!-- scene + transform (bottom-left) -->
+        <div class="ov bl">
+          <div class="grp">
+            <select id="bgSelect" style="width:auto;">
+              <option value="room" selected>Gallery</option>
+              <option value="studio">Studio wall</option>
+              <option value="custom">Uploaded…</option>
+            </select>
+            <button id="bgUpload" class="iconbtn" title="Upload a room photo">📷</button>
+            <input type="file" id="bgInput" accept="image/*" hidden>
           </div>
-          <button id="loadJson" class="ghost">📂 Load project</button>
-          <input type="file" id="fileInput" accept="application/json" hidden>
+          <div class="grp">
+            <span class="lbl">X</span><input type="number" id="trX" min="-20" max="120" step="1">
+            <span class="lbl">Y</span><input type="number" id="trY" min="-20" max="120" step="1">
+          </div>
+          <div class="grp">
+            <span class="lbl">Scale</span><input type="range" id="trScale" min="20" max="260" value="100"><span id="trScaleV" class="lbl">100%</span>
+          </div>
+          <div class="grp">
+            <span class="lbl">Rotate</span><input type="range" id="trRot" min="-180" max="180" value="0"><span id="trRotV" class="lbl">0°</span>
+          </div>
+          <div class="grp">
+            <span class="lbl">Opacity</span><input type="range" id="studioOpacity" min="20" max="100" value="100">
+          </div>
+          <button id="resetCorners">Reset</button>
         </div>
       </div>
     </div>
 
-    <!-- RIGHT: live views, resizable side by side -->
-    <div class="views">
-      <div class="viewrow" id="viewrow">
+    <div class="view-splitter" id="splitter"></div>
 
-        <div class="pane" id="paneRoom">
-          <div class="pane-h">
-            <span>In the room</span>
-            <span class="sub">
-              <select id="bgSelect" style="width:auto;display:inline-block;">
-                <option value="room" selected>Gallery floor</option>
-                <option value="studio">Studio wall</option>
-                <option value="custom">Uploaded…</option>
-              </select>
-              <button id="bgUpload" class="ghost" style="padding:5px 8px;" title="Upload a room photo">📷</button>
-            </span>
-          </div>
-          <input type="file" id="bgInput" accept="image/*" hidden>
-          <div class="studio-wrap" id="studioWrap">
-            <img class="bg" id="studioBg" src="room.jpg" alt="Scene">
-            <div id="studioWarp"><canvas id="studioCanvas" width="500" height="500"></canvas></div>
-            <div class="handle" data-corner="0"></div>
-            <div class="handle" data-corner="1"></div>
-            <div class="handle" data-corner="2"></div>
-            <div class="handle" data-corner="3"></div>
-          </div>
-          <div class="scene-controls">
-            <div class="row" style="justify-content:center; gap:12px; flex-wrap:wrap;">
-              <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">X
-                <input type="number" id="trX" min="-20" max="120" step="1" style="width:52px;"><span style="color:var(--ink-soft)">%</span>
-              </label>
-              <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">Y
-                <input type="number" id="trY" min="-20" max="120" step="1" style="width:52px;"><span style="color:var(--ink-soft)">%</span>
-              </label>
-              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Scale
-                <input type="range" id="trScale" min="20" max="260" value="100" style="width:96px;"><span id="trScaleV" style="color:var(--ink-soft);width:40px;">100%</span>
-              </label>
-              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Rotate
-                <input type="range" id="trRot" min="-180" max="180" value="0" style="width:96px;"><span id="trRotV" style="color:var(--ink-soft);width:36px;">0°</span>
-              </label>
-              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Opacity
-                <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:84px;">
-              </label>
-              <button id="resetCorners" class="ghost">Reset</button>
-            </div>
-            <div class="meta">Drag the rug to move it · drag the four corners for perspective.</div>
-          </div>
-        </div>
-
-        <div class="splitter" data-i="0" title="Drag to resize"></div>
-
-        <div class="pane" id="paneCompare">
-          <div class="pane-h"><span>Artwork ⇄ Tufted</span><label class="sub" style="cursor:pointer;"><input type="checkbox" id="showGrid" checked> Grid</label></div>
-          <div class="compare" id="compare">
-            <canvas id="previewCanvas" width="640" height="640"></canvas>
-            <canvas id="designCanvas" width="560" height="560"></canvas>
-            <div class="curtain" id="curtain"><div class="curtain-line"></div><div class="curtain-grip"></div></div>
-            <span class="clabel left">Artwork</span>
-            <span class="clabel right">Tufted</span>
-          </div>
-        </div>
+    <!-- COMPARE -->
+    <div class="view" id="paneCompare">
+      <div class="compare" id="compare">
+        <canvas id="previewCanvas" width="640" height="640"></canvas>
+        <canvas id="designCanvas" width="560" height="560"></canvas>
+        <div class="curtain" id="curtain"><div class="curtain-line"></div><div class="curtain-grip"></div></div>
+        <span class="clabel left">Artwork</span>
+        <span class="clabel right">Tufted</span>
+        <label class="ov tr grp" style="cursor:pointer;"><input type="checkbox" id="showGrid" checked> <span class="lbl">Grid</span></label>
       </div>
     </div>
   </div>
@@ -263,21 +233,15 @@
 
 <!-- ===================== ESTIMATE ===================== -->
 <section id="tab-estimate" class="tabpane">
-  <div class="est-wrap panel">
+  <div class="est-wrap">
     <h2>Yarn estimate</h2>
-    <div class="body">
-      <table class="est-table" id="estTable"><tbody></tbody></table>
-      <div class="est-total" id="estTotal"></div>
-      <div class="row" style="margin-top:14px;">
-        <label class="fld" style="flex:1;">Pile density (kg/m²)
-          <input type="number" id="density" value="2.6" min="0.5" max="6" step="0.1">
-        </label>
-        <label class="fld" style="flex:1;">€ / cone
-          <input type="number" id="conePrice" value="17.5" min="0" step="0.5">
-        </label>
-      </div>
-      <div class="note" style="margin-top:10px;">Cones = 500g (Tufting Europe NZ wool). Rough estimate for hand-tufted cut pile — tune density to your pile height. Colours match their orderable range.</div>
+    <table class="est-table" id="estTable"><tbody></tbody></table>
+    <div class="est-total" id="estTotal"></div>
+    <div class="row">
+      <label>Pile density (kg/m²)<input type="number" id="density" value="2.6" min="0.5" max="6" step="0.1"></label>
+      <label>€ / cone<input type="number" id="conePrice" value="17.5" min="0" step="0.5"></label>
     </div>
+    <div class="note" style="margin-top:12px;">Cones = 500g (Tufting Europe NZ wool). Rough estimate for hand-tufted cut pile — tune density to your pile height.</div>
   </div>
 </section>
 
@@ -290,7 +254,6 @@
   const RUG_M = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rug-m')) || 2.0;
   let N = 400;
   let grid = [];
-  // Palette mirrors the Tufting Europe 100% NZ-wool range (500g cones, ~€17.50 each).
   let palette = [
     {hex:'#f3f0e9', name:'White'},        {hex:'#e4dccb', name:'Light Beige'},  {hex:'#d6bd96', name:'Honey Beige'},
     {hex:'#9a8f6b', name:'Khaki'},        {hex:'#b08a63', name:'Light Brown'},  {hex:'#8a5a37', name:'Maple Brown'},
@@ -319,7 +282,7 @@
   const previewCanvas = $('#previewCanvas'), pctx = previewCanvas.getContext('2d');
   const studioCanvas = $('#studioCanvas'), sctx = studioCanvas.getContext('2d');
 
-  // ---------- history (recolour edits) ----------
+  // ---------- history ----------
   function snapshot(){ return JSON.stringify({grid, palette}); }
   function pushHistory(){ undoStack.push(snapshot()); if (undoStack.length>80) undoStack.shift(); redoStack.length=0; }
   function restore(s){ const d=JSON.parse(s); grid=d.grid; palette=d.palette; afterEdit(); }
@@ -341,7 +304,7 @@
         for (let i=0;i<=N;i++){ const p=Math.round(i*s)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
         dctx.stroke();
       }
-      const g = w/40; // 5cm guidelines (200cm / 40)
+      const g = w/40;
       dctx.strokeStyle='rgba(212,175,38,.6)'; dctx.lineWidth=1; dctx.beginPath();
       for (let i=0;i<=40;i++){ const p=Math.round(i*g)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
       dctx.stroke();
@@ -395,7 +358,6 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              // upright square centred at X24% / Y52% (Jonas's preferred default)
               corners:[ {x:0.137,y:0.392}, {x:0.343,y:0.392}, {x:0.343,y:0.648}, {x:0.137,y:0.648} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
@@ -421,7 +383,7 @@
 
   function drawStudio(){
     const wrap = $('#studioWrap'); const W = wrap.clientWidth, H = wrap.clientHeight;
-    if (!W || !H) return;                       // hidden tab → skip
+    if (!W || !H) return;
     const px = 500; studioCanvas.width = px; studioCanvas.height = px;
     drawTufted(sctx, px);
     studioCanvas.style.width = W+'px'; studioCanvas.style.height = H+'px';
@@ -433,6 +395,17 @@
   function positionHandles(){
     const wrap=$('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
     document.querySelectorAll('.handle').forEach(h=>{ const c=corners[+h.dataset.corner]; h.style.left=(c.x*W)+'px'; h.style.top=(c.y*H)+'px'; });
+  }
+
+  // ---------- fit the two media boxes into their views ----------
+  function fitMedia(){
+    const rv=$('#paneRoom'), wrap=$('#studioWrap'), ar=2000/1600;
+    let vw=rv.clientWidth-20, vh=rv.clientHeight-20;
+    if (vw>0 && vh>0){ let w=Math.min(vw, vh*ar); wrap.style.width=w+'px'; wrap.style.height=(w/ar)+'px'; }
+    const cv=$('#paneCompare'), cmp=$('#compare');
+    let cw=Math.min(cv.clientWidth-20, cv.clientHeight-20);
+    if (cw>0){ cmp.style.width=cw+'px'; cmp.style.height=cw+'px'; }
+    drawStudio();
   }
 
   // ---------- estimate ----------
@@ -464,7 +437,7 @@
     const pop=document.createElement('div'); pop.className='popover';
     const h=document.createElement('h3'); h.textContent=opts.title; pop.appendChild(h);
     if (opts.showHex && opts.currentIdx!=null){
-      const row=document.createElement('div'); row.className='row'; row.style.marginBottom='9px';
+      const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:9px;';
       const hex=document.createElement('input'); hex.type='color'; hex.className='rc-hex'; hex.value=palette[opts.currentIdx].hex;
       hex.oninput=()=>{ palette[opts.currentIdx].hex=hex.value; redrawAll(); };
       const t=document.createElement('div'); t.className='note'; t.style.flex='1'; t.textContent='Fine-tune '+palette[opts.currentIdx].name;
@@ -481,7 +454,7 @@
     });
     pop.appendChild(list);
     document.body.appendChild(pop);
-    const r=anchor.getBoundingClientRect(), pw=286, ph=pop.offsetHeight;
+    const r=anchor.getBoundingClientRect(), pw=280, ph=pop.offsetHeight;
     let left=r.left, top=r.bottom+6;
     if(left+pw>window.innerWidth-8) left=window.innerWidth-8-pw;
     if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
@@ -490,45 +463,32 @@
     setTimeout(()=>document.addEventListener('pointerdown', popOutside, true), 0);
   }
 
-  // ---------- recolour (the main action) ----------
+  // ---------- recolour rail (minimal swatches; names in the popover) ----------
   function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; afterEdit(); }
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
     const used=palette.map((c,i)=>i).filter(i=>counts[i]>0);
     const wrap=$('#recolourList'); wrap.innerHTML='';
-    if(!used.length){ wrap.innerHTML='<div class="note">Upload artwork to see its colours here.</div>'; return; }
-
-    // the colours in the rug — click one to pick a replacement from the popover
-    const usedRow=document.createElement('div'); usedRow.className='rc-used';
+    if(!used.length) return;
     used.forEach(i=>{
-      const it=document.createElement('div'); it.className='item';
-      const sw=document.createElement('div'); sw.className='sw'; sw.style.background=palette[i].hex;
-      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=palette[i].name;
-      it.appendChild(sw); it.appendChild(nm);
-      it.onclick=()=> openPicker(it, { title:'Replace '+palette[i].name+' with', currentIdx:i, showHex:true, onPick:(j)=>{ remapColour(i,j); closePopover(); } });
-      usedRow.appendChild(it);
+      const b=document.createElement('button'); b.className='rc-sw'; b.style.background=palette[i].hex; b.title=palette[i].name;
+      b.onclick=()=> openPicker(b, { title:'Replace '+palette[i].name+' with', currentIdx:i, showHex:true, onPick:(j)=>{ remapColour(i,j); closePopover(); } });
+      wrap.appendChild(b);
     });
-    wrap.appendChild(usedRow);
-    const hint=document.createElement('div'); hint.className='note'; hint.textContent='Click a colour to swap it for another yarn.'; wrap.appendChild(hint);
-
-    // fill a shape
-    const ft=document.createElement('button'); ft.className='ghost'+(fillMode?' primary':''); ft.style.width='100%'; ft.style.marginTop='4px';
-    ft.textContent='🪣 Fill a shape: '+(fillMode?'on':'off');
+    // fill tool
+    const ft=document.createElement('button'); ft.className='rc-tool'+(fillMode?' on':''); ft.textContent='🪣'; ft.title='Fill a closed shape';
     ft.onclick=()=>{ fillMode=!fillMode; if(fillMode && fillColor==null) fillColor=used.includes(10)?10:used[0]; $('#compare').style.cursor=fillMode?'crosshair':'ew-resize'; renderRecolour(); };
     wrap.appendChild(ft);
     if (fillMode){
-      const dropBtn=document.createElement('button'); dropBtn.className='ghost dropbtn'; dropBtn.style.width='100%';
-      dropBtn.innerHTML='<span class="chip" style="background:'+palette[fillColor].hex+'"></span>&nbsp; Drop: '+palette[fillColor].name+' ▾';
-      dropBtn.onclick=()=> openPicker(dropBtn, { title:'Drop colour', currentIdx:fillColor, onPick:(j)=>{ fillColor=j; closePopover(); renderRecolour(); } });
-      wrap.appendChild(dropBtn);
-      const fn=document.createElement('div'); fn.className='note'; fn.textContent='Click inside a closed shape in the flat design to drop this yarn.'; wrap.appendChild(fn);
+      const dz=document.createElement('button'); dz.className='rc-sw'; dz.style.background=palette[fillColor].hex; dz.title='Drop colour: '+palette[fillColor].name;
+      dz.style.outline='2px solid var(--fg)'; dz.style.outlineOffset='1px';
+      dz.onclick=()=> openPicker(dz, { title:'Drop colour', currentIdx:fillColor, onPick:(j)=>{ fillColor=j; closePopover(); renderRecolour(); } });
+      wrap.appendChild(dz);
     }
-
-    const undoRow=document.createElement('div'); undoRow.className='row'; undoRow.style.marginTop='4px';
-    const u=document.createElement('button'); u.className='ghost'; u.style.flex='1'; u.textContent='↶ Undo'; u.disabled=!undoStack.length; u.onclick=undo;
-    const r=document.createElement('button'); r.className='ghost'; r.style.flex='1'; r.textContent='↷ Redo'; r.disabled=!redoStack.length; r.onclick=redo;
-    undoRow.appendChild(u); undoRow.appendChild(r); wrap.appendChild(undoRow);
+    const u=document.createElement('button'); u.className='rc-tool'; u.textContent='↶'; u.title='Undo'; u.disabled=!undoStack.length; u.onclick=undo;
+    const r=document.createElement('button'); r.className='rc-tool'; r.textContent='↷'; r.title='Redo'; r.disabled=!redoStack.length; r.onclick=redo;
+    wrap.appendChild(u); wrap.appendChild(r);
   }
 
   // ---------- orchestration ----------
@@ -540,7 +500,7 @@
   function showTab(name){
     document.querySelectorAll('#apptabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
     document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('show', p.id==='tab-'+name));
-    if (name==='workspace') drawStudio();
+    if (name==='workspace') fitMedia();
     if (name==='estimate') renderEstimate();
   }
   document.querySelectorAll('#apptabs button').forEach(b=> b.onclick=()=>showTab(b.dataset.tab));
@@ -598,7 +558,7 @@
   function setBackground(key){
     bgKey=key; const img=$('#studioBg'); const src=(key==='custom')?BG.custom.src:BG[key].src;
     corners=JSON.parse(JSON.stringify(BG[key].corners)); resetTransformControls();
-    if(src){ img.onload=drawStudio; img.src=src; } else drawStudio();
+    if(src){ img.onload=fitMedia; img.src=src; } else fitMedia();
   }
   $('#bgSelect').onchange = e => setBackground(e.target.value);
   $('#bgUpload').onclick = ()=> $('#bgInput').click();
@@ -615,34 +575,26 @@
   $('#trY').oninput = e=>{ moveCentroidTo(centroid().x, (+e.target.value)/100); };
 
   (function bindMove(){ let md=null;
-    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; studioCanvas.setPointerCapture(e.pointerId); });
+    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
     document.addEventListener('pointermove', e=>{ if(!md) return; const r=$('#studioWrap').getBoundingClientRect(); const dx=(e.clientX-md.x)/r.width, dy=(e.clientY-md.y)/r.height; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY}; drawStudio(); });
     document.addEventListener('pointerup', ()=> md=null);
   })();
   (function bindHandles(){ let drag=null;
-    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; h.setPointerCapture(e.pointerId); }); });
+    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
     document.addEventListener('pointermove', e=>{ if(drag===null) return; const r=$('#studioWrap').getBoundingClientRect(); corners[drag]={ x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)), y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)) }; drawStudio(); });
     document.addEventListener('pointerup', ()=> drag=null);
   })();
-  window.addEventListener('resize', ()=> drawStudio());
 
-  // ---------- resizable view panes (drag the splitters) ----------
-  let paneW = [58, 42];
-  function applyPanes(){ ['paneRoom','paneCompare'].forEach((id,k)=> $('#'+id).style.flex = paneW[k]+' 1 0'); }
-  (function bindSplitters(){
-    let drag=null;
-    document.querySelectorAll('.splitter').forEach(sp=>{
-      sp.addEventListener('pointerdown', e=>{ e.preventDefault(); drag={i:+sp.dataset.i, el:sp, x:e.clientX, w:[...paneW]}; sp.classList.add('drag'); sp.setPointerCapture(e.pointerId); });
-    });
-    document.addEventListener('pointermove', e=>{
-      if(!drag) return;
-      const total=$('#viewrow').clientWidth||1, d=(e.clientX-drag.x)/total*100, a=drag.i, b=drag.i+1;
-      let wa=drag.w[a]+d, wb=drag.w[b]-d; const min=12;
-      if(wa<min){ wb-=(min-wa); wa=min; } if(wb<min){ wa-=(min-wb); wb=min; }
-      paneW[a]=wa; paneW[b]=wb; applyPanes(); drawStudio();
-    });
-    document.addEventListener('pointerup', ()=>{ if(drag){ drag.el.classList.remove('drag'); drag=null; drawStudio(); } });
+  // ---------- splitter (resize the two views) ----------
+  let split=56;
+  function applySplit(){ $('#views').style.setProperty('--split', split+'%'); }
+  (function bindSplitter(){
+    const sp=$('#splitter'); let drag=false;
+    sp.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=true; sp.classList.add('drag'); try{sp.setPointerCapture(e.pointerId);}catch(_){ } });
+    document.addEventListener('pointermove', e=>{ if(!drag) return; const v=$('#views').getBoundingClientRect(); split=Math.max(20,Math.min(85,(e.clientX-v.left)/v.width*100)); applySplit(); fitMedia(); });
+    document.addEventListener('pointerup', ()=>{ if(drag){ drag=false; sp.classList.remove('drag'); fitMedia(); } });
   })();
+  window.addEventListener('resize', fitMedia);
 
   // ---------- export / save ----------
   function downloadCanvas(c,name){ c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
@@ -652,7 +604,7 @@
   $('#loadJson').onclick = ()=> $('#fileInput').click();
   $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; fillColor=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
 
-  // ---------- fill a shape (drop a colour into a closed region) ----------
+  // ---------- fill a shape ----------
   function floodFillAt(cx,cy,to){
     if(cx<0||cy<0||cx>=N||cy>=N||to==null) return;
     const from=grid[cy][cx]; if(from===to) return;
@@ -661,7 +613,7 @@
     while(st.length){ const [x,y]=st.pop(); if(x<0||y<0||x>=N||y>=N) continue; if(grid[y][x]!==from) continue; grid[y][x]=to; st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]); }
     afterEdit();
   }
-  // ---------- compare curtain (drag to reveal artwork vs tufted) + fill clicks ----------
+  // ---------- compare curtain + fill clicks ----------
   let curtainX = 50, curtainDrag = false;
   function applyCurtain(){ $('#compare').style.setProperty('--cx', curtainX+'%'); }
   (function bindCompare(){
@@ -685,8 +637,8 @@
   $('#conePrice').oninput = renderEstimate;
 
   // ---------- init ----------
-  applyPanes(); applyCurtain();
-  grid = blankGrid(N); updateLabels(); afterEdit();
+  applySplit(); applyCurtain();
+  grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image(); img.onload=()=>importImage(img); img.src=URL.createObjectURL(b);
   }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
