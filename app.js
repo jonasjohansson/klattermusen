@@ -6,22 +6,52 @@
   const RUG_M = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--rug-m')) || 2.0;
   let N = 400;
   let grid = [];
+  // Tufting Europe NZ-wool range. u = product slug, s = in stock (1) / sold out (0)
+  // — stock checked 2026-06-09; product URL built in yarnUrl().
   let palette = [
-    {hex:'#f3f0e9', name:'White'},        {hex:'#e4dccb', name:'Light Beige'},  {hex:'#d6bd96', name:'Honey Beige'},
-    {hex:'#9a8f6b', name:'Khaki'},        {hex:'#b08a63', name:'Light Brown'},  {hex:'#8a5a37', name:'Maple Brown'},
-    {hex:'#4f3a2a', name:'Dark Brown'},   {hex:'#c9c6c0', name:'Light Grey'},   {hex:'#6d6d70', name:'Dark Grey'},
-    {hex:'#45454a', name:'Graphite Grey'},{hex:'#1d1c1a', name:'Black'},        {hex:'#edc3a6', name:'Peachy Beige'},
-    {hex:'#e89a82', name:'Salmon'},       {hex:'#c8702f', name:'Ginger Orange'},{hex:'#e8631f', name:'Orange Blast'},
-    {hex:'#f4361f', name:'Fluor Red'},    {hex:'#b81f2d', name:'Cherry Red'},   {hex:'#6e1f2a', name:'Bordeaux'},
-    {hex:'#c98e2b', name:'Ochre Yellow'}, {hex:'#d9a72b', name:'Mustard Yellow'},{hex:'#f2c623', name:'Yellow'},
-    {hex:'#6f6f33', name:'Olive Green'},  {hex:'#6b8540', name:'Moss Green'},   {hex:'#2f5233', name:'Forest Green'},
-    {hex:'#234b3a', name:'Pine Green'},   {hex:'#1f7a78', name:'Teal'},         {hex:'#6fb3ad', name:'Light Teal'},
-    {hex:'#1fb0a8', name:'Turquoise'},    {hex:'#a9ddd6', name:'Light Aqua'},   {hex:'#a7cfe8', name:'Light Blue'},
-    {hex:'#6fb0de', name:'Sky Blue'},     {hex:'#5a7d99', name:'Steel Blue'},   {hex:'#2f5aa8', name:'Cobalt Blue'},
-    {hex:'#2c3b78', name:'Mid Indigo Blue'},{hex:'#1e2a52', name:'Navy Blue'},  {hex:'#6a4ca0', name:'Violet'},
-    {hex:'#4a2f6b', name:'Dark Purple'},  {hex:'#4a2440', name:'Aubergine Purple'},{hex:'#d44d8a', name:'Deep Pink'},
-    {hex:'#c0357f', name:'Fuchsia Pink'}, {hex:'#ecc0d2', name:'Light Pink'},
+    {hex:'#f3f0e9', name:'White',          u:'white',          s:0},
+    {hex:'#e4dccb', name:'Light Beige',    u:'light-beige',    s:1},
+    {hex:'#d6bd96', name:'Honey Beige',    u:'beige',          s:1},
+    {hex:'#9a8f6b', name:'Khaki',          u:'khaki',          s:1},
+    {hex:'#b08a63', name:'Light Brown',    u:'light-brown',    s:1},
+    {hex:'#8a5a37', name:'Maple Brown',    u:'maple-brown',    s:1},
+    {hex:'#4f3a2a', name:'Dark Brown',     u:'dark-brown',     s:1},
+    {hex:'#c9c6c0', name:'Light Grey',     u:'light-grey',     s:1},
+    {hex:'#6d6d70', name:'Dark Grey',      u:'dark-grey',      s:1},
+    {hex:'#45454a', name:'Graphite Grey',  u:'graphite-grey',  s:1},
+    {hex:'#1d1c1a', name:'Black',          u:'black',          s:0},
+    {hex:'#edc3a6', name:'Peachy Beige',   u:'peachy-beige',   s:0},
+    {hex:'#e89a82', name:'Salmon',         u:'salmon',         s:1},
+    {hex:'#c8702f', name:'Ginger Orange',  u:'ginger-orange',  s:1},
+    {hex:'#e8631f', name:'Orange Blast',   u:'orange-blast',   s:1},
+    {hex:'#f4361f', name:'Fluor Red',      u:'fluor-red',      s:1},
+    {hex:'#b81f2d', name:'Cherry Red',     u:'cherry-red',     s:1},
+    {hex:'#6e1f2a', name:'Bordeaux',       u:'bordeaux',       s:1},
+    {hex:'#c98e2b', name:'Ochre Yellow',   u:'ochre-yellow',   s:0},
+    {hex:'#d9a72b', name:'Mustard Yellow', u:'mustard-yellow', s:0},
+    {hex:'#f2c623', name:'Yellow',         u:'yellow',         s:0},
+    {hex:'#6f6f33', name:'Olive Green',    u:'olive-green',    s:0},
+    {hex:'#6b8540', name:'Moss Green',     u:'moss-green',     s:1},
+    {hex:'#2f5233', name:'Forest Green',   u:'forest-green',   s:0},
+    {hex:'#234b3a', name:'Pine Green',     u:'pine-green',     s:0},
+    {hex:'#1f7a78', name:'Teal',           u:'teal',           s:1},
+    {hex:'#6fb3ad', name:'Light Teal',     u:'light-teal',     s:1},
+    {hex:'#1fb0a8', name:'Turquoise',      u:'turquoise',      s:1},
+    {hex:'#a9ddd6', name:'Light Aqua',     u:'light-aqua',     s:1},
+    {hex:'#a7cfe8', name:'Light Blue',     u:'light-blue',     s:1},
+    {hex:'#6fb0de', name:'Sky Blue',       u:'sky-blue',       s:1},
+    {hex:'#5a7d99', name:'Steel Blue',     u:'steel-blue',     s:1},
+    {hex:'#2f5aa8', name:'Cobalt Blue',    u:'cobalt-blue',    s:1},
+    {hex:'#2c3b78', name:'Mid Indigo Blue',u:'mid-indigo-blue',s:1},
+    {hex:'#1e2a52', name:'Navy Blue',      u:'navy-blue',      s:0},
+    {hex:'#6a4ca0', name:'Violet',         u:'violet',         s:1},
+    {hex:'#4a2f6b', name:'Dark Purple',    u:'dark-purple',    s:1},
+    {hex:'#4a2440', name:'Aubergine Purple',u:'auberginepurple',s:1},
+    {hex:'#d44d8a', name:'Deep Pink',      u:'deep-pink',      s:0},
+    {hex:'#c0357f', name:'Fuchsia Pink',   u:'fuchsia-pink',   s:1},
+    {hex:'#ecc0d2', name:'Light Pink',     u:'light-pink',     s:0},
   ];
+  const yarnUrl = c => 'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/';
   const CONE_G = 500;
   let conePrice = 17.5;
   let fillColor = null, recolorTarget = null;
@@ -171,7 +201,9 @@
       if(!counts[i]) return;
       const area=counts[i]*cellArea, kg=area*density, cones=Math.ceil(kg*1000/CONE_G); totalCones+=cones;
       const tr=document.createElement('tr');
-      tr.innerHTML=`<td class="c"><span class="dot" style="background:${c.hex}"></span></td><td>${c.name}</td><td class="n">${kg.toFixed(2)} kg</td><td class="n">${cones} cone${cones>1?'s':''}</td>`;
+      tr.innerHTML=`<td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
+        `<td><a href="${yarnUrl(c)}" target="_blank" rel="noopener">${c.name}</a>${c.s?'':' <span class="oos">sold out</span>'}</td>`+
+        `<td class="n">${kg.toFixed(2)} kg</td><td class="n">${cones} cone${cones>1?'s':''}</td>`;
       tbody.appendChild(tr);
     });
     const totalKg=filled*cellArea*density, cost=totalCones*conePrice;
@@ -192,7 +224,7 @@
 
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
     used.forEach(i=>{
-      const b=document.createElement('button'); b.className='rc-sw'+(!fillMode && i===recolorTarget?' active':''); b.style.background=palette[i].hex; b.title=palette[i].name;
+      const b=document.createElement('button'); b.className='rc-sw'+(!fillMode && i===recolorTarget?' active':'')+(palette[i].s?'':' oos'); b.style.background=palette[i].hex; b.title=palette[i].name+(palette[i].s?'':' — sold out');
       b.onclick=()=>{ recolorTarget=i; fillMode=false; $('#compare').style.cursor='ew-resize'; renderRecolour(); };
       rc.appendChild(b);
     });
@@ -207,7 +239,7 @@
     rc.appendChild(st);
 
     palette.forEach((c,j)=>{
-      const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':''); s.style.background=c.hex; s.title=c.name;
+      const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':'')+(c.s?'':' oos'); s.style.background=c.hex; s.title=c.name+(c.s?'':' — sold out');
       s.onclick=()=> fillMode ? (fillColor=j, renderRecolour()) : remapColour(recolorTarget, j);
       tray.appendChild(s);
     });
