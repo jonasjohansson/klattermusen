@@ -87,14 +87,18 @@
   .clabel { position: absolute; top: 8px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); pointer-events: none; }
   .clabel.left { left: 10px; } .clabel.right { right: 10px; }
 
-  /* floating, translucent bottom dock — controls left, BOM right */
+  /* floating translucent bottom dock — colours + background (full width) */
   #dock { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 10;
-    display: flex; gap: 12px; padding: 10px 12px; max-height: 48vh;
+    display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; max-height: 42vh; overflow: auto;
     background: rgba(255,255,255,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
     border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 24px rgba(0,0,0,.14); }
-  .dock-left { flex: 1.15; min-width: 0; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
-  .dock-right { flex: 1; min-width: 0; overflow: auto; border-left: 1px solid var(--border); padding-left: 12px; }
   .dock-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  /* BOM — small floating panel, top-right */
+  #bomPanel { position: absolute; top: 8px; right: 8px; z-index: 10; width: 300px; max-height: 64vh; overflow: auto;
+    display: flex; flex-direction: column; gap: 8px; padding: 9px 11px;
+    background: rgba(255,255,255,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 18px rgba(0,0,0,.14); }
+  #bomPanel > select { width: 100%; }
   .dock-row.tray { gap: 4px; }
   .dock-row .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .dock-row .sep { width: 1px; height: 20px; background: var(--border); margin: 0 5px; }

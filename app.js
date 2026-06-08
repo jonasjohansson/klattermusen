@@ -62,8 +62,7 @@
   };
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
-  let fillColor = null, recolorTarget = null;
-  let showGrid = true, fillMode = false;
+  let recolorTarget = null;
   let groundIdx = null, lastPatColor = null;   // background-pattern state
 
   const undoStack = [], redoStack = [];
@@ -88,17 +87,6 @@
       const v = grid[y][x];
       dctx.fillStyle = v<0 ? '#fbfaf7' : palette[v].hex;
       dctx.fillRect(x*s, y*s, Math.ceil(s), Math.ceil(s));
-    }
-    if (showGrid){
-      if (s >= 8){
-        dctx.strokeStyle='rgba(0,0,0,.10)'; dctx.lineWidth=1; dctx.beginPath();
-        for (let i=0;i<=N;i++){ const p=Math.round(i*s)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
-        dctx.stroke();
-      }
-      const g = w/40;
-      dctx.strokeStyle='rgba(212,175,38,.6)'; dctx.lineWidth=1; dctx.beginPath();
-      for (let i=0;i<=40;i++){ const p=Math.round(i*g)+.5; dctx.moveTo(p,0); dctx.lineTo(p,w); dctx.moveTo(0,p); dctx.lineTo(w,p); }
-      dctx.stroke();
     }
     dctx.strokeStyle='rgba(0,0,0,.35)'; dctx.lineWidth=2; dctx.strokeRect(1,1,w-2,w-2);
   }
@@ -200,16 +188,16 @@
   }
 
   // ---------- estimate ----------
+  const DENSITY = 2.6;   // kg/m² pile — fixed
   function renderEstimate(){
-    const sup=SUPPLIERS[supplier];
+    const sup=SUPPLIERS[supplier], price=sup.price, m=sup.mat;
     const counts=new Array(palette.length).fill(0); let filled=0;
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
-    const cellArea=(RUG_M/N)*(RUG_M/N), density=parseFloat($('#density').value)||2.6;
-    const price=parseFloat($('#unitPrice').value)||sup.price;
+    const cellArea=(RUG_M/N)*(RUG_M/N);
     let rows='', totalKg=0, totalCost=0, totalCones=0, anyOOS=false;
     palette.forEach((c,i)=>{
       if(!counts[i]) return;
-      const kg=counts[i]*cellArea*density; totalKg+=kg;
+      const kg=counts[i]*cellArea*DENSITY; totalKg+=kg;
       let detail, cost;
       if (sup.unit==='cone'){ const cones=Math.ceil(kg*1000/sup.coneG); totalCones+=cones; cost=cones*price; detail=`${cones} cone${cones>1?'s':''}`; }
       else { const billKg=Math.max(1,kg); cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
@@ -217,19 +205,17 @@
       const ok=sup.stock(c); if(!ok) anyOOS=true;
       rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
-        `<td class="n">${kg.toFixed(2)} kg</td><td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+        `<td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
-    // materials: primary cloth, glue, backing (editable, supplier currency)
-    const cloth=parseFloat($('#matCloth').value)||0, glue=parseFloat($('#matGlue').value)||0, backing=parseFloat($('#matBacking').value)||0;
-    const matSum=cloth+glue+backing;
+    const matSum=m.cloth+m.glue+m.backing;
     if (filled){
-      [['Primary tufting cloth',cloth],['Tuft glue',glue],['Backing / anti-slip',backing]].forEach(([nm,cost])=>{
-        rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing]].forEach(([nm,cost])=>{
+        rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
     const grand=totalCost+matSum;
     const total = filled
-      ? `<strong>${totalKg.toFixed(1)} kg</strong>${totalCones?' · '+totalCones+' cones':''} · yarn ${sup.cur}${totalCost.toFixed(0)} + materials ${sup.cur}${matSum.toFixed(0)} = <strong>${sup.cur}${grand.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
+      ? `<strong>${totalKg.toFixed(1)} kg</strong>${totalCones?' · '+totalCones+' cones':''} · <strong>${sup.cur}${grand.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
       : 'Upload artwork to see the yarn estimate.';
     $('#bom').innerHTML = filled
       ? `<table class="est-table"><tbody>${rows}</tbody></table><div class="est-total">${total}</div>`
@@ -237,7 +223,16 @@
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
-  function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; if(groundIdx===from) groundIdx=to; recolorTarget=to; afterEdit(); }
+  function remapColour(from, to){
+    if(from===to) return;
+    pushHistory();
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to;
+    // keep pattern state in sync so re-patterning doesn't stack old colours
+    if(groundIdx===from) groundIdx=to;
+    if(lastPatColor===from) lastPatColor=to;
+    const ps=$('#patColor'); if(ps && +ps.value===from) ps.value=String(to);
+    recolorTarget=to; afterEdit();
+  }
 
   // ---------- background pattern (fills the dominant 'ground' region with a 2-colour pattern) ----------
   function populatePatColors(){ const sel=$('#patColor'); sel.innerHTML=''; palette.forEach((c,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=c.name; sel.appendChild(o); }); sel.value='1'; }
@@ -272,21 +267,17 @@
 
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
     used.forEach(i=>{
-      const chip=document.createElement('div'); chip.className='rc-chip'+(!fillMode && i===recolorTarget?' active':'');
+      const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
       chip.appendChild(sw); chip.appendChild(nm);
-      chip.onclick=()=>{ recolorTarget=i; fillMode=false; $('#compare').style.cursor='ew-resize'; renderRecolour(); };
+      chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
     });
-    const ft=document.createElement('button'); ft.className='rc-tool'+(fillMode?' on':''); ft.textContent='🪣'; ft.title='Fill a closed shape';
-    ft.onclick=()=>{ fillMode=!fillMode; if(fillMode && fillColor==null) fillColor=recolorTarget; $('#compare').style.cursor=fillMode?'crosshair':'ew-resize'; renderRecolour(); };
-    rc.appendChild(ft);
-    if (fillMode){ const st=document.createElement('span'); st.className='lbl'; st.textContent='fill: '+palette[fillColor].name+' — click a shape'; rc.appendChild(st); }
 
     palette.forEach((c,j)=>{
-      const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':'')+(inStock(c)?'':' oos'); s.style.background=c.hex; s.title=c.name+(inStock(c)?'':' — sold out');
-      s.onclick=()=> fillMode ? (fillColor=j, renderRecolour()) : remapColour(recolorTarget, j);
+      const s=document.createElement('button'); s.className='tray-sw'+(inStock(c)?'':' oos'); s.style.background=c.hex; s.title=c.name+(inStock(c)?'':' — sold out');
+      s.onclick=()=> remapColour(recolorTarget, j);
       tray.appendChild(s);
     });
   }
@@ -296,14 +287,8 @@
   function afterEdit(){ redrawAll(); renderRecolour(); }
   function updateLabels(){ $('#dimLabel').textContent=`${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`; $('#cellLabel').textContent=`${Math.round(RUG_M/N*1000)} mm`; }
 
-  // ---------- supplier (BOM pricing / links / stock / materials) ----------
-  function setSupplierDefaults(){
-    const sup=SUPPLIERS[supplier];
-    $('#unitPrice').value=sup.price; $('#priceLbl').textContent=sup.cur+' / '+sup.unit;
-    $('#matCloth').value=sup.mat.cloth; $('#matGlue').value=sup.mat.glue; $('#matBacking').value=sup.mat.backing;
-  }
-  $('#supplier').onchange = e=>{ supplier=e.target.value; setSupplierDefaults(); renderEstimate(); renderRecolour(); };
-  ['#matCloth','#matGlue','#matBacking'].forEach(s=> $(s).oninput=renderEstimate);
+  // ---------- supplier (BOM pricing / links / stock) ----------
+  $('#supplier').onchange = e=>{ supplier=e.target.value; renderEstimate(); renderRecolour(); };
 
   // ---------- import artwork ----------
   function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
@@ -338,7 +323,7 @@
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
     // dominant colour = the rug's background (target for patterns)
     { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc)); lastPatColor=null; if($('#patType')) $('#patType').value='plain'; }
-    grid=tmp; fillColor=null; afterEdit();
+    grid=tmp; afterEdit();
   }
 
   $('#importBtn').onclick = ()=> $('#imgInput').click();
@@ -402,42 +387,24 @@
   $('#exportDesign').onclick = ()=>{ const W=1600,s=W/N,c=document.createElement('canvas'); c.width=c.height=W; const x=c.getContext('2d'); for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){ const v=grid[yy][xx]; x.fillStyle=v<0?'#ffffff':palette[v].hex; x.fillRect(xx*s,yy*s,Math.ceil(s),Math.ceil(s)); } downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
-  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; fillColor=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
+  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
 
-  // ---------- fill a shape ----------
-  function floodFillAt(cx,cy,to){
-    if(cx<0||cy<0||cx>=N||cy>=N||to==null) return;
-    const from=grid[cy][cx]; if(from===to) return;
-    pushHistory();
-    const st=[[cx,cy]];
-    while(st.length){ const [x,y]=st.pop(); if(x<0||y<0||x>=N||y>=N) continue; if(grid[y][x]!==from) continue; grid[y][x]=to; st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]); }
-    afterEdit();
-  }
-  // ---------- compare curtain + fill clicks ----------
+  // ---------- compare curtain (drag to reveal artwork vs tufted) ----------
   let curtainX = 50, curtainDrag = false;
   function applyCurtain(){ $('#compare').style.setProperty('--cx', curtainX+'%'); }
   (function bindCompare(){
     const cmp=$('#compare');
     function moveCurtain(e){ const r=cmp.getBoundingClientRect(); curtainX=Math.max(2,Math.min(98,(e.clientX-r.left)/r.width*100)); applyCurtain(); }
-    cmp.addEventListener('pointerdown', e=>{ if(fillMode) return; e.preventDefault(); curtainDrag=true; try{ cmp.setPointerCapture(e.pointerId); }catch(_){ } moveCurtain(e); });
+    cmp.addEventListener('pointerdown', e=>{ e.preventDefault(); curtainDrag=true; try{ cmp.setPointerCapture(e.pointerId); }catch(_){ } moveCurtain(e); });
     cmp.addEventListener('pointermove', e=>{ if(curtainDrag) moveCurtain(e); });
     cmp.addEventListener('pointerup', ()=> curtainDrag=false);
-    cmp.addEventListener('click', e=>{
-      if(!fillMode || fillColor==null) return;
-      const r=cmp.getBoundingClientRect();
-      const x=Math.floor((e.clientX-r.left)/r.width*N), y=Math.floor((e.clientY-r.top)/r.height*N);
-      floodFillAt(Math.max(0,Math.min(N-1,x)), Math.max(0,Math.min(N-1,y)), fillColor);
-    });
   })();
-  $('#showGrid').onchange = e => { showGrid=e.target.checked; drawDesign(); };
 
   // ---------- keyboard ----------
   window.addEventListener('keydown', e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); } });
-  $('#density').oninput = renderEstimate;
-  $('#unitPrice').oninput = renderEstimate;
 
   // ---------- init ----------
-  applySplit(); applyCurtain(); setSupplierDefaults(); populatePatColors();
+  applySplit(); applyCurtain(); populatePatColors();
   grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image();
