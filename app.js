@@ -54,11 +54,12 @@
   // Suppliers (stock checked 2026-06-09). The design palette is shared; the toggle
   // reframes pricing/links/stock for the BOM. Hitex/Tufting Shop links go to their
   // catalogue (no per-colour slugs); their colour match is approximate.
-  // mat = rough material costs (primary cloth, tuft glue, backing) for a 2×2m rug, in the supplier's currency — editable.
+  // All prices in SEK. EUR suppliers converted at ~11.3 SEK/€ (Tufting Europe €17.50/cone ≈ 198 kr).
+  // mat = rough material costs (cloth, glue, backing) for a 2×2m rug.
   const SUPPLIERS = {
-    te:          { label:'Tufting Europe', cur:'€',  unit:'cone', coneG:500, price:17.5,  link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:45, glue:20, backing:18} },
-    tuftingshop: { label:'Tufting Shop',   cur:'€',  unit:'cone', coneG:500, price:17.85, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:45, glue:20, backing:18} },
-    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594,   link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190} },
+    te:          { label:'Tufting Europe', cur:'kr', unit:'cone', coneG:500, price:198, link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:509, glue:226, backing:203} },
+    tuftingshop: { label:'Tufting Shop',   cur:'kr', unit:'cone', coneG:500, price:202, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:509, glue:226, backing:203} },
+    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190} },
   };
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
@@ -270,7 +271,8 @@
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
-      chip.appendChild(sw); chip.appendChild(nm);
+      const role=document.createElement('span'); role.className='role'; role.textContent=(i===groundIdx||i===lastPatColor)?'background':'symbol';
+      chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
       chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
     });
