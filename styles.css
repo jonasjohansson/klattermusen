@@ -1,17 +1,17 @@
   :root {
     --rug-m: 2.0;
-    --bg: #ece8e1;
+    --bg: #ffffff;
     --panel: #ffffff;
-    --fg: #2c2a26;
-    --muted: #8c877d;
-    --border: #d8d2c7;
-    --hover: #f0ece4;
+    --fg: #1a1a1a;
+    --muted: #777777;
+    --border: #cfcfcf;
+    --hover: #f1f1f1;
     --accent: #b4502e;
-    --compare-bg: #fbfaf7;
-    --radius: 4px;
+    --compare-bg: #f5f5f5;
+    --radius: 1px;
     --ctrl: 30px;
-    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --font: var(--mono);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
@@ -48,10 +48,8 @@
   .menu .menu-pop label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
   .menu .menu-pop .inline { flex-direction: row; align-items: center; gap: 7px; }
 
-  /* tab panes */
-  .tabpane { display: none; }
-  .tabpane.show { display: flex; flex: 1; min-height: 0; }
-  #tab-estimate.show { display: block; overflow: auto; }
+  /* workspace fills the viewport below the header */
+  #workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
   /* two-view workspace */
   #views { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--split, 56%) 1fr; position: relative; background: var(--bg); }
@@ -80,7 +78,6 @@
   .clabel.left { left: 10px; } .clabel.right { right: 10px; }
 
   /* bottom dock — all controls */
-  #tab-workspace.show { flex-direction: column; }
   #dock { flex: 0 0 auto; border-top: 1px solid var(--border); background: var(--panel); padding: 9px 12px; display: flex; flex-direction: column; gap: 8px; max-height: 44vh; overflow: auto; }
   .dock-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .dock-row.tray { gap: 4px; }
@@ -103,18 +100,23 @@
   /* grounding shadow so the rug sits in the room */
   #studioWarp canvas { filter: drop-shadow(0 6px 11px rgba(0,0,0,.4)); }
 
-  /* estimate */
-  .est-wrap { max-width: 520px; margin: 28px auto; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
-  .est-wrap h2 { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 14px; }
-  .est-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .est-table td { padding: 5px 3px; border-bottom: 1px solid var(--hover); }
-  .est-table td.c { width: 18px; }
-  .est-table td .dot { width: 16px; height: 16px; border-radius: 3px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+  /* in-rug colour chips (swatch + name) */
+  .rc-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 2px 9px 2px 2px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
+  .rc-chip:hover { border-color: var(--fg); }
+  .rc-chip.active { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .rc-chip .sw { width: 22px; height: 22px; border-radius: var(--radius); box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); position: relative; }
+  .rc-chip .sw.oos::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: repeating-linear-gradient(45deg, rgba(255,255,255,.85) 0 1.5px, transparent 1.5px 5px); }
+  .rc-chip .nm { font-size: 12px; color: var(--fg); }
+
+  /* BOM (bill of materials) in the dock */
+  #bom { width: 100%; }
+  .est-table { width: 100%; max-width: 600px; border-collapse: collapse; font-size: 12px; }
+  .est-table td { padding: 4px 10px 4px 0; border-bottom: 1px solid var(--hover); }
+  .est-table td.c { width: 16px; padding-right: 0; }
+  .est-table td .dot { width: 15px; height: 15px; border-radius: 3px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
   .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
   .est-table a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--border); }
   .est-table a:hover { border-color: var(--fg); }
-  .oos { color: var(--accent); font-size: 11px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
-  .est-total { font-size: 13px; margin-top: 12px; color: var(--muted); }
+  .oos { color: var(--accent); font-size: 10px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
+  .est-total { font-size: 12px; margin-top: 8px; color: var(--muted); }
   .est-total strong { color: var(--fg); }
-  .est-wrap .row { display: flex; gap: 12px; margin-top: 16px; }
-  .est-wrap label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); flex: 1; }

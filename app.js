@@ -51,9 +51,16 @@
     {hex:'#c0357f', name:'Fuchsia Pink',   u:'fuchsia-pink',   s:1},
     {hex:'#ecc0d2', name:'Light Pink',     u:'light-pink',     s:0},
   ];
-  const yarnUrl = c => 'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/';
-  const CONE_G = 500;
-  let conePrice = 17.5;
+  // Suppliers (stock checked 2026-06-09). The design palette is shared; the toggle
+  // reframes pricing/links/stock for the BOM. Hitex/Tufting Shop links go to their
+  // catalogue (no per-colour slugs); their colour match is approximate.
+  const SUPPLIERS = {
+    te:          { label:'Tufting Europe', cur:'€',  unit:'cone', coneG:500, price:17.5,  link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s },
+    tuftingshop: { label:'Tufting Shop',   cur:'€',  unit:'cone', coneG:500, price:17.85, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true },
+    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594,   link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true },
+  };
+  let supplier = 'te';
+  const inStock = c => SUPPLIERS[supplier].stock(c);
   let fillColor = null, recolorTarget = null;
   let showGrid = true, fillMode = false;
 
@@ -192,24 +199,30 @@
 
   // ---------- estimate ----------
   function renderEstimate(){
+    const sup=SUPPLIERS[supplier];
     const counts=new Array(palette.length).fill(0); let filled=0;
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
     const cellArea=(RUG_M/N)*(RUG_M/N), density=parseFloat($('#density').value)||2.6;
-    conePrice=parseFloat($('#conePrice').value)||0;
-    const tbody=$('#estTable').querySelector('tbody'); tbody.innerHTML=''; let totalCones=0;
+    const price=parseFloat($('#unitPrice').value)||sup.price;
+    let rows='', totalKg=0, totalCost=0, totalCones=0, anyOOS=false;
     palette.forEach((c,i)=>{
       if(!counts[i]) return;
-      const area=counts[i]*cellArea, kg=area*density, cones=Math.ceil(kg*1000/CONE_G); totalCones+=cones;
-      const tr=document.createElement('tr');
-      tr.innerHTML=`<td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
-        `<td><a href="${yarnUrl(c)}" target="_blank" rel="noopener">${c.name}</a>${c.s?'':' <span class="oos">sold out</span>'}</td>`+
-        `<td class="n">${kg.toFixed(2)} kg</td><td class="n">${cones} cone${cones>1?'s':''}</td>`;
-      tbody.appendChild(tr);
+      const kg=counts[i]*cellArea*density; totalKg+=kg;
+      let detail, cost;
+      if (sup.unit==='cone'){ const cones=Math.ceil(kg*1000/sup.coneG); totalCones+=cones; cost=cones*price; detail=`${cones} cone${cones>1?'s':''}`; }
+      else { const billKg=Math.max(1,kg); cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
+      totalCost+=cost;
+      const ok=sup.stock(c); if(!ok) anyOOS=true;
+      rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
+        `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
+        `<td class="n">${kg.toFixed(2)} kg</td><td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
-    const totalKg=filled*cellArea*density, cost=totalCones*conePrice;
-    $('#estTotal').innerHTML = filled
-      ? `<strong>${totalKg.toFixed(1)} kg</strong> · <strong>${totalCones}</strong> cones ≈ <strong>€${cost.toFixed(0)}</strong>`
-      : 'No design loaded yet.';
+    const total = filled
+      ? `<strong>${totalKg.toFixed(1)} kg</strong> · ${totalCones?totalCones+' cones · ':''}<strong>${sup.cur}${totalCost.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
+      : 'Upload artwork to see the yarn estimate.';
+    $('#bom').innerHTML = filled
+      ? `<table class="est-table"><tbody>${rows}</tbody></table><div class="est-total">${total}</div>`
+      : `<span class="lbl">${total}</span>`;
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
@@ -224,22 +237,22 @@
 
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
     used.forEach(i=>{
-      const b=document.createElement('button'); b.className='rc-sw'+(!fillMode && i===recolorTarget?' active':'')+(palette[i].s?'':' oos'); b.style.background=palette[i].hex; b.title=palette[i].name+(palette[i].s?'':' — sold out');
-      b.onclick=()=>{ recolorTarget=i; fillMode=false; $('#compare').style.cursor='ew-resize'; renderRecolour(); };
-      rc.appendChild(b);
+      const chip=document.createElement('div'); chip.className='rc-chip'+(!fillMode && i===recolorTarget?' active':'');
+      const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
+      const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
+      chip.appendChild(sw); chip.appendChild(nm);
+      chip.onclick=()=>{ recolorTarget=i; fillMode=false; $('#compare').style.cursor='ew-resize'; renderRecolour(); };
+      rc.appendChild(chip);
     });
     const ft=document.createElement('button'); ft.className='rc-tool'+(fillMode?' on':''); ft.textContent='🪣'; ft.title='Fill a closed shape';
     ft.onclick=()=>{ fillMode=!fillMode; if(fillMode && fillColor==null) fillColor=recolorTarget; $('#compare').style.cursor=fillMode?'crosshair':'ew-resize'; renderRecolour(); };
     rc.appendChild(ft);
-    const u=document.createElement('button'); u.className='rc-tool'; u.textContent='↶'; u.title='Undo'; u.disabled=!undoStack.length; u.onclick=undo;
-    const rd=document.createElement('button'); rd.className='rc-tool'; rd.textContent='↷'; rd.title='Redo'; rd.disabled=!redoStack.length; rd.onclick=redo;
-    rc.appendChild(u); rc.appendChild(rd);
     const st=document.createElement('span'); st.className='lbl';
-    st.textContent = fillMode ? ('Fill: '+palette[fillColor].name+' — click a shape') : ('pick a yarn to recolour '+palette[recolorTarget].name);
+    st.textContent = fillMode ? ('fill: '+palette[fillColor].name+' — click a shape') : 'tap a yarn below to recolour the selected chip';
     rc.appendChild(st);
 
     palette.forEach((c,j)=>{
-      const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':'')+(c.s?'':' oos'); s.style.background=c.hex; s.title=c.name+(c.s?'':' — sold out');
+      const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':'')+(inStock(c)?'':' oos'); s.style.background=c.hex; s.title=c.name+(inStock(c)?'':' — sold out');
       s.onclick=()=> fillMode ? (fillColor=j, renderRecolour()) : remapColour(recolorTarget, j);
       tray.appendChild(s);
     });
@@ -250,14 +263,12 @@
   function afterEdit(){ redrawAll(); renderRecolour(); }
   function updateLabels(){ $('#dimLabel').textContent=`${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`; $('#cellLabel').textContent=`${Math.round(RUG_M/N*1000)} mm`; }
 
-  // ---------- tabs ----------
-  function showTab(name){
-    document.querySelectorAll('#apptabs button').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
-    document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('show', p.id==='tab-'+name));
-    if (name==='workspace') fitMedia();
-    if (name==='estimate') renderEstimate();
-  }
-  document.querySelectorAll('#apptabs button').forEach(b=> b.onclick=()=>showTab(b.dataset.tab));
+  // ---------- supplier (BOM pricing / links / stock) ----------
+  $('#supplier').onchange = e=>{
+    supplier=e.target.value; const sup=SUPPLIERS[supplier];
+    $('#unitPrice').value=sup.price; $('#priceLbl').textContent=sup.cur+' / '+sup.unit;
+    renderEstimate(); renderRecolour();
+  };
 
   // ---------- import artwork ----------
   function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
@@ -290,7 +301,7 @@
       remap[i]=best;
     }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
-    grid=tmp; fillColor=null; afterEdit(); showTab('workspace');
+    grid=tmp; fillColor=null; afterEdit();
   }
 
   $('#importBtn').onclick = ()=> $('#imgInput').click();
@@ -378,7 +389,7 @@
   // ---------- keyboard ----------
   window.addEventListener('keydown', e=>{ if(e.target.tagName==='INPUT'||e.target.tagName==='SELECT') return; if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); } });
   $('#density').oninput = renderEstimate;
-  $('#conePrice').oninput = renderEstimate;
+  $('#unitPrice').oninput = renderEstimate;
 
   // ---------- init ----------
   applySplit(); applyCurtain();
