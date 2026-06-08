@@ -75,12 +75,19 @@
   canvas { display: block; touch-action: none; }
 
   /* ---- recolour ---- */
-  .rc-used { display: flex; flex-wrap: wrap; gap: 8px; }
-  .rc-swatch { width: 46px; height: 46px; border-radius: 9px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); border: 2px solid transparent; }
-  .rc-swatch.sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
-  .rc-pick { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
-  .rc-pick .sw { aspect-ratio: 1; border-radius: 5px; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
-  .rc-pick .sw:hover { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .rc-used { display: flex; flex-wrap: wrap; gap: 10px; }
+  .rc-used .item { width: 62px; text-align: center; cursor: pointer; }
+  .rc-used .item .sw { width: 46px; height: 46px; border-radius: 9px; margin: 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.15); border: 2px solid transparent; }
+  .rc-used .item.sel .sw { border-color: var(--ink); box-shadow: inset 0 0 0 1px rgba(0,0,0,.15), 0 0 0 2px #fff, 0 0 0 4px var(--accent); }
+  .rc-used .item .nm { font-size: 10px; color: var(--ink-soft); margin-top: 4px; line-height: 1.2; }
+  .rc-used .item.sel .nm { color: var(--ink); font-weight: 600; }
+
+  .rc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; max-height: 232px; overflow-y: auto; padding-right: 2px; }
+  .rc-pick .opt { display: flex; align-items: center; gap: 7px; padding: 4px 5px; border-radius: 6px; cursor: pointer; }
+  .rc-pick .opt:hover { background: var(--accent-soft); }
+  .rc-pick .opt.sel { outline: 2px solid var(--ink); }
+  .rc-pick .opt .chip { width: 18px; height: 18px; border-radius: 4px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
+  .rc-pick .opt .nm { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rc-hex { width: 34px; height: 30px; padding: 2px; border-radius: 6px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
 
   /* ---- studio scene ---- */
@@ -440,13 +447,15 @@
     if(!used.length){ wrap.innerHTML='<div class="note">Upload artwork to see its colours here.</div>'; return; }
     if(recolorTarget==null || recolorTarget>=palette.length) recolorTarget=used[0];
 
-    // used colours (big swatches) + hex tweak
+    // used colours (big swatches with names) — click to select which yarn you're working with
     const usedRow=document.createElement('div'); usedRow.className='rc-used';
     used.forEach(i=>{
-      const sw=document.createElement('div'); sw.className='rc-swatch'+(i===recolorTarget?' sel':'');
-      sw.style.background=palette[i].hex; sw.title=palette[i].name;
-      sw.onclick=()=>{ recolorTarget=i; renderRecolour(); };
-      usedRow.appendChild(sw);
+      const it=document.createElement('div'); it.className='item'+(i===recolorTarget?' sel':'');
+      const sw=document.createElement('div'); sw.className='sw'; sw.style.background=palette[i].hex;
+      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=palette[i].name;
+      it.appendChild(sw); it.appendChild(nm);
+      it.onclick=()=>{ recolorTarget=i; renderRecolour(); };
+      usedRow.appendChild(it);
     });
     wrap.appendChild(usedRow);
 
@@ -456,18 +465,20 @@
     hex.oninput=()=>{ palette[recolorTarget].hex=hex.value; redrawAll(); };
     hex.onchange=()=>renderRecolour();
     const lbl=document.createElement('div'); lbl.className='note'; lbl.style.flex='1';
-    lbl.textContent='Selected: '+palette[recolorTarget].name+'. Tap a yarn below to swap it.';
+    lbl.innerHTML='<strong>'+palette[recolorTarget].name+'</strong> selected — '+(fillMode?'tap a yarn to set the drop colour.':'tap a yarn below to swap it.');
     tuneRow.appendChild(hex); tuneRow.appendChild(lbl);
     wrap.appendChild(tuneRow);
 
-    // full yarn picker
+    // full yarn picker — every yarn shown with its name visible (no hover needed)
     const pick=document.createElement('div'); pick.className='rc-pick';
     palette.forEach((c,j)=>{
-      const s=document.createElement('div'); s.className='sw'; s.style.background=c.hex; s.title=c.name;
-      if (fillMode && j===recolorTarget){ s.style.outline='2px solid var(--ink)'; s.style.outlineOffset='1px'; }
-      // fill mode: picker just selects the drop colour; otherwise it swaps the selected yarn everywhere
-      s.onclick=()=> fillMode ? (recolorTarget=j, renderRecolour()) : remapColour(recolorTarget, j);
-      pick.appendChild(s);
+      const o=document.createElement('div'); o.className='opt'+(fillMode && j===recolorTarget ? ' sel':'');
+      const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c.hex;
+      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=c.name;
+      o.appendChild(chip); o.appendChild(nm);
+      // fill mode: picker selects the drop colour; otherwise it swaps the selected yarn everywhere
+      o.onclick=()=> fillMode ? (recolorTarget=j, renderRecolour()) : remapColour(recolorTarget, j);
+      pick.appendChild(o);
     });
     wrap.appendChild(pick);
 
