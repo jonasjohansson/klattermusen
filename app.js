@@ -191,10 +191,10 @@
   // ---------- fit the two media boxes into their views ----------
   function fitMedia(){
     const rv=$('#paneRoom'), wrap=$('#studioWrap'), ar=2000/1600;
-    let vw=rv.clientWidth-20, vh=rv.clientHeight-20;
-    if (vw>0 && vh>0){ let w=Math.min(vw, vh*ar); wrap.style.width=w+'px'; wrap.style.height=(w/ar)+'px'; }
-    const cv=$('#paneCompare'), cmp=$('#compare');
-    let cw=Math.min(cv.clientWidth-20, cv.clientHeight-20);
+    let vw=rv.clientWidth, vh=rv.clientHeight;                 // room = COVER: fill the pane, crop overflow
+    if (vw>0 && vh>0){ let w=Math.max(vw, vh*ar); wrap.style.width=w+'px'; wrap.style.height=(w/ar)+'px'; }
+    const cv=$('#paneCompare'), cmp=$('#compare');             // compare = CONTAIN square, edge to edge
+    let cw=Math.min(cv.clientWidth, cv.clientHeight);
     if (cw>0){ cmp.style.width=cw+'px'; cmp.style.height=cw+'px'; }
     placeStudio();
   }
@@ -282,9 +282,7 @@
     const ft=document.createElement('button'); ft.className='rc-tool'+(fillMode?' on':''); ft.textContent='🪣'; ft.title='Fill a closed shape';
     ft.onclick=()=>{ fillMode=!fillMode; if(fillMode && fillColor==null) fillColor=recolorTarget; $('#compare').style.cursor=fillMode?'crosshair':'ew-resize'; renderRecolour(); };
     rc.appendChild(ft);
-    const st=document.createElement('span'); st.className='lbl';
-    st.textContent = fillMode ? ('fill: '+palette[fillColor].name+' — click a shape') : 'tap a yarn below to recolour the selected chip';
-    rc.appendChild(st);
+    if (fillMode){ const st=document.createElement('span'); st.className='lbl'; st.textContent='fill: '+palette[fillColor].name+' — click a shape'; rc.appendChild(st); }
 
     palette.forEach((c,j)=>{
       const s=document.createElement('button'); s.className='tray-sw'+(fillMode && j===fillColor?' active':'')+(inStock(c)?'':' oos'); s.style.background=c.hex; s.title=c.name+(inStock(c)?'':' — sold out');
@@ -368,16 +366,24 @@
   $('#trX').oninput = e=>{ moveCentroidTo((+e.target.value)/100, centroid().y); };
   $('#trY').oninput = e=>{ moveCentroidTo(centroid().x, (+e.target.value)/100); };
 
+  const showXform=()=>{ $('#studioWrap').classList.add('dragging'); $('#transformPop').classList.add('show'); };
+  const endDrag=()=> $('#studioWrap').classList.remove('dragging');
   (function bindMove(){ let md=null;
-    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
+    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; showXform(); try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
     document.addEventListener('pointermove', e=>{ if(!md) return; const r=$('#studioWrap').getBoundingClientRect(); const dx=(e.clientX-md.x)/r.width, dy=(e.clientY-md.y)/r.height; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY}; placeStudio(); });
-    document.addEventListener('pointerup', ()=> md=null);
+    document.addEventListener('pointerup', ()=>{ if(md){ md=null; endDrag(); } });
   })();
   (function bindHandles(){ let drag=null;
-    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
+    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; showXform(); try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
     document.addEventListener('pointermove', e=>{ if(drag===null) return; const r=$('#studioWrap').getBoundingClientRect(); corners[drag]={ x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)), y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)) }; placeStudio(); });
-    document.addEventListener('pointerup', ()=> drag=null);
+    document.addEventListener('pointerup', ()=>{ if(drag!==null){ drag=null; endDrag(); } });
   })();
+  // dismiss the transform popover when clicking away from the rug / popover
+  document.addEventListener('pointerdown', e=>{
+    const p=$('#transformPop'); if(!p.classList.contains('show')) return;
+    if($('#studioWrap').contains(e.target) || p.contains(e.target)) return;
+    p.classList.remove('show');
+  }, true);
 
   // ---------- splitter (resize the two views) ----------
   let split=56;

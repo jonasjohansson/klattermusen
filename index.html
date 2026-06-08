@@ -55,6 +55,13 @@
       </div>
     </div>
 
+    <div id="transformPop">
+      <span class="lbl">X</span><input type="number" id="trX" min="-20" max="120" step="1">
+      <span class="lbl">Y</span><input type="number" id="trY" min="-20" max="120" step="1">
+      <span class="lbl">Scale</span><input type="range" id="trScale" min="20" max="260" value="100"><span id="trScaleV" class="lbl">100%</span>
+      <button id="resetCorners">Reset</button>
+    </div>
+
     <div class="view-splitter" id="splitter"></div>
 
     <div class="view" id="paneCompare">
@@ -74,11 +81,6 @@
     <div class="dock-row" id="rugColors"></div>
     <div class="dock-row tray" id="paletteTray"></div>
     <div class="dock-row" id="transformRow">
-      <span class="lbl">X</span><input type="number" id="trX" min="-20" max="120" step="1">
-      <span class="lbl">Y</span><input type="number" id="trY" min="-20" max="120" step="1">
-      <span class="lbl">Scale</span><input type="range" id="trScale" min="20" max="260" value="100"><span id="trScaleV" class="lbl">100%</span>
-      <button id="resetCorners">Reset position</button>
-      <span class="sep"></span>
       <label class="lbl" style="cursor:pointer;display:flex;gap:6px;align-items:center;"><input type="checkbox" id="showGrid" checked> Grid</label>
     </div>
     <div class="dock-row" id="patternRow">
