@@ -245,15 +245,7 @@
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){
       const v=grid[y][x];
       if(v!==groundIdx && v!==pc && v!==lastPatColor) continue;   // only re-pattern the background region
-      let g;
-      switch(type){
-        case 'checker':  g=((Math.floor(x/b)+Math.floor(y/b))&1)===0; break;
-        case 'stripesH': g=(Math.floor(y/b)&1)===0; break;
-        case 'stripesV': g=(Math.floor(x/b)&1)===0; break;
-        case 'diagonal': g=(Math.floor((x+y)/b)&1)===0; break;
-        case 'dots':     g=!((x%(b*2)<b)&&(y%(b*2)<b)); break;
-        default:         g=true;   // plain
-      }
+      const g = type==='checker' ? (((Math.floor(x/b)+Math.floor(y/b))&1)===0) : true;   // plain = all ground
       grid[y][x]= g?groundIdx:pc;
     }
     lastPatColor=pc; afterEdit();
