@@ -180,42 +180,7 @@
       : 'No design loaded yet.';
   }
 
-  // ---------- yarn picker popover ----------
-  let popoverEl=null;
-  function closePopover(){ if(popoverEl){ popoverEl.remove(); popoverEl=null; document.removeEventListener('pointerdown', popOutside, true); } }
-  function popOutside(e){ if(popoverEl && !popoverEl.contains(e.target)) closePopover(); }
-  function openPicker(anchor, opts){
-    closePopover();
-    const pop=document.createElement('div'); pop.className='popover';
-    const h=document.createElement('h3'); h.textContent=opts.title; pop.appendChild(h);
-    if (opts.showHex && opts.currentIdx!=null){
-      const row=document.createElement('div'); row.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:9px;';
-      const hex=document.createElement('input'); hex.type='color'; hex.className='rc-hex'; hex.value=palette[opts.currentIdx].hex;
-      hex.oninput=()=>{ palette[opts.currentIdx].hex=hex.value; redrawAll(); };
-      const t=document.createElement('div'); t.className='note'; t.style.flex='1'; t.textContent='Fine-tune '+palette[opts.currentIdx].name;
-      row.appendChild(hex); row.appendChild(t); pop.appendChild(row);
-    }
-    const list=document.createElement('div'); list.className='rc-pick';
-    palette.forEach((c,j)=>{
-      const o=document.createElement('div'); o.className='opt'+(j===opts.currentIdx?' sel':'');
-      const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c.hex;
-      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=c.name;
-      o.appendChild(chip); o.appendChild(nm);
-      o.onclick=()=> opts.onPick(j);
-      list.appendChild(o);
-    });
-    pop.appendChild(list);
-    document.body.appendChild(pop);
-    const r=anchor.getBoundingClientRect(), pw=280, ph=pop.offsetHeight;
-    let left=r.left, top=r.bottom+6;
-    if(left+pw>window.innerWidth-8) left=window.innerWidth-8-pw;
-    if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
-    pop.style.left=Math.max(8,left)+'px'; pop.style.top=Math.max(8,top)+'px';
-    popoverEl=pop;
-    setTimeout(()=>document.addEventListener('pointerdown', popOutside, true), 0);
-  }
-
-  // ---------- recolour rail (minimal swatches; names in the popover) ----------
+  // ---------- recolour (used colours + full palette tray in the dock) ----------
   function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; recolorTarget=to; afterEdit(); }
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);

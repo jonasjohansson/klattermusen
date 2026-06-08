@@ -7,6 +7,7 @@
     --border: #d8d2c7;
     --hover: #f0ece4;
     --accent: #b4502e;
+    --compare-bg: #fbfaf7;
     --radius: 4px;
     --ctrl: 30px;
     --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
@@ -18,7 +19,6 @@
 
   /* header */
   header { display: flex; align-items: center; gap: 18px; padding: 0 14px; height: 46px; border-bottom: 1px solid var(--border); background: var(--panel); flex: 0 0 auto; }
-  .brand { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg); }
   .tabs { display: inline-flex; gap: 16px; }
   .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 3px 1px; color: var(--muted); font: inherit; cursor: pointer; }
   .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
@@ -70,7 +70,7 @@
   canvas { display: block; touch-action: none; }
 
   /* curtain compare */
-  .compare { position: relative; overflow: hidden; background: #fbfaf7; --cx: 50%; cursor: ew-resize; touch-action: none; }
+  .compare { position: relative; overflow: hidden; background: var(--compare-bg); --cx: 50%; cursor: ew-resize; touch-action: none; }
   .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   #designCanvas { clip-path: inset(0 calc(100% - var(--cx)) 0 0); }
   .curtain { position: absolute; top: 0; bottom: 0; left: var(--cx); width: 0; pointer-events: none; z-index: 4; }
@@ -78,23 +78,6 @@
   .curtain-grip { position: absolute; top: 50%; left: -11px; width: 22px; height: 22px; transform: translateY(-50%); border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.35); }
   .clabel { position: absolute; top: 8px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); pointer-events: none; }
   .clabel.left { left: 10px; } .clabel.right { right: 10px; }
-
-  /* floating overlays on the imagery — transparent, controls carry their own chrome */
-  .ov { position: absolute; z-index: 6; display: flex; gap: 6px; align-items: center; }
-  .ov.tl { top: 10px; left: 10px; flex-wrap: wrap; max-width: calc(100% - 20px); }
-  .ov.tr { top: 10px; right: 10px; }
-  .ov.bl { bottom: 10px; left: 10px; flex-wrap: wrap; max-width: calc(100% - 20px); }
-  .ov .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); background: rgba(255,255,255,.7); padding: 2px 4px; border-radius: 3px; }
-  .ov select, .ov input[type="number"], .ov button { background: var(--panel); }
-  .ov input[type="number"] { width: 46px; }
-  .ov input[type="range"] { width: 78px; }
-  .ov .grp { display: flex; gap: 5px; align-items: center; background: rgba(255,255,255,.82); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px 7px; }
-  .ov .grp .lbl { background: none; padding: 0; }
-
-  /* recolour rail — small swatches, names live in the popover */
-  .rc-sw { width: var(--ctrl); height: var(--ctrl); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; padding: 0; box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); }
-  .rc-sw:hover { border-color: var(--fg); }
-  .ov.tl .iconbtn, .rc-tool { width: var(--ctrl); height: var(--ctrl); padding: 0; font-size: 13px; }
 
   /* bottom dock — all controls */
   #tab-workspace.show { flex-direction: column; }
@@ -115,17 +98,6 @@
   .rc-tool.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
   /* grounding shadow so the rug sits in the room */
   #studioWarp canvas { filter: drop-shadow(0 6px 11px rgba(0,0,0,.4)); }
-
-  /* popover (named yarns) */
-  .popover { position: fixed; z-index: 70; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 10px; width: 280px; }
-  .popover h3 { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 9px; font-weight: 600; }
-  .rc-pick { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; max-height: 240px; overflow-y: auto; }
-  .rc-pick .opt { display: flex; align-items: center; gap: 7px; padding: 4px 5px; border-radius: 3px; cursor: pointer; }
-  .rc-pick .opt:hover { background: var(--hover); }
-  .rc-pick .opt.sel { outline: 1px solid var(--fg); }
-  .rc-pick .opt .chip { width: 16px; height: 16px; border-radius: 3px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
-  .rc-pick .opt .nm { font-size: 11px; color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .rc-hex { width: 30px; height: 26px; padding: 2px; border-radius: 3px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
 
   /* estimate */
   .est-wrap { max-width: 520px; margin: 28px auto; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
