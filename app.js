@@ -72,6 +72,8 @@
   const designCanvas = $('#designCanvas'), dctx = designCanvas.getContext('2d');
   const previewCanvas = $('#previewCanvas'), pctx = previewCanvas.getContext('2d');
   const studioCanvas = $('#studioCanvas'), sctx = studioCanvas.getContext('2d');
+  // the wool texture is expensive; render it once per edit into this cache and reuse for preview + studio
+  const tuftCache = document.createElement('canvas'); tuftCache.width = tuftCache.height = 640; const tctx = tuftCache.getContext('2d');
 
   // ---------- history ----------
   function snapshot(){ return JSON.stringify({grid, palette}); }
@@ -81,19 +83,16 @@
   function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); }
 
   // ---------- render: flat design ----------
-  function drawDesign(){
-    const w = designCanvas.width, s = w/N;
-    dctx.clearRect(0,0,w,w);
-    for (let y=0;y<N;y++) for (let x=0;x<N;x++){
-      const v = grid[y][x];
-      dctx.fillStyle = v<0 ? '#fbfaf7' : palette[v].hex;
-      dctx.fillRect(x*s, y*s, Math.ceil(s), Math.ceil(s));
-    }
+  function fillGridCells(ctx, w, bg){
+    const s=w/N;
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; ctx.fillStyle = v<0?bg:palette[v].hex; ctx.fillRect(x*s, y*s, Math.ceil(s), Math.ceil(s)); }
   }
+  function drawDesign(){ const w=designCanvas.width; dctx.clearRect(0,0,w,w); fillGridCells(dctx, w, '#fbfaf7'); }
 
   // ---------- render: tufted wool ----------
   function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-  function shade(hex, amt){ const n=parseInt(hex.slice(1),16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; r=Math.max(0,Math.min(255,r+amt));g=Math.max(0,Math.min(255,g+amt));b=Math.max(0,Math.min(255,b+amt)); return `rgb(${r|0},${g|0},${b|0})`; }
+  function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
+  function shade(hex, amt){ const [r,g,b]=hexToRgb(hex), c=v=>Math.max(0,Math.min(255,v+amt))|0; return `rgb(${c(r)},${c(g)},${c(b)})`; }
 
   function drawTufted(ctx, w){
     const s = w/N;
@@ -161,15 +160,20 @@
     return 'matrix3d('+[ t[0],t[3],0,t[6], t[1],t[4],0,t[7], 0,0,1,0, t[2],t[5],0,t[8] ].join(',')+')';
   }
 
-  // expensive: re-render the wool texture (only when the design/colours change)
-  function paintStudio(){ studioCanvas.width=500; studioCanvas.height=500; drawTufted(sctx,500); }
-  // cheap: reposition/scale the already-painted canvas (safe to call every drag frame)
+  // paint the studio rug from the shared wool cache (cheap blit, no re-render)
+  function paintStudio(){ studioCanvas.width=500; studioCanvas.height=500; sctx.drawImage(tuftCache, 0,0, 500,500); }
+  // cheap: reposition/scale the already-painted canvas — coalesced to one update per frame
+  let placePending=false;
   function placeStudio(){
-    const wrap=$('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight; if(!W||!H) return;
-    studioCanvas.style.width=W+'px'; studioCanvas.style.height=H+'px';
-    studioCanvas.style.transform=matFromCorners(W,H,corners);
-    $('#studioWarp').style.mixBlendMode=BG[bgKey].blend;
-    positionHandles(); syncXY();
+    if(placePending) return; placePending=true;
+    requestAnimationFrame(()=>{
+      placePending=false;
+      const wrap=$('#studioWrap'), W=wrap.clientWidth, H=wrap.clientHeight; if(!W||!H) return;
+      studioCanvas.style.width=W+'px'; studioCanvas.style.height=H+'px';
+      studioCanvas.style.transform=matFromCorners(W,H,corners);
+      $('#studioWarp').style.mixBlendMode=BG[bgKey].blend;
+      positionHandles(); syncXY();
+    });
   }
   function drawStudio(){ paintStudio(); placeStudio(); }
   function positionHandles(){
@@ -277,7 +281,14 @@
   }
 
   // ---------- orchestration ----------
-  function redrawAll(){ drawDesign(); drawTufted(pctx, previewCanvas.width); drawStudio(); renderEstimate(); }
+  function redrawAll(){
+    drawDesign();
+    drawTufted(tctx, 640);                                         // render the wool ONCE into the cache
+    pctx.clearRect(0,0,previewCanvas.width,previewCanvas.height);
+    pctx.drawImage(tuftCache, 0,0, previewCanvas.width, previewCanvas.height);
+    drawStudio();                                                  // paintStudio blits the same cache
+    renderEstimate();
+  }
   function afterEdit(){ redrawAll(); renderRecolour(); }
   function updateLabels(){ $('#dimLabel').textContent=`${RUG_M.toFixed(1)} × ${RUG_M.toFixed(1)} m`; $('#cellLabel').textContent=`${Math.round(RUG_M/N*1000)} mm`; }
 
@@ -285,7 +296,6 @@
   $('#supplier').onchange = e=>{ supplier=e.target.value; renderEstimate(); renderRecolour(); };
 
   // ---------- import artwork ----------
-  function hexToRgb(hex){ const n=parseInt(hex.slice(1),16); return [(n>>16)&255,(n>>8)&255,n&255]; }
   const palRgb = () => palette.map(c=>hexToRgb(c.hex));
   function nearestIdx(r,g,b,rgbs){ let best=0,bd=Infinity; for(let i=0;i<rgbs.length;i++){ const [pr,pg,pb]=rgbs[i]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=i;} } return best; }
 
@@ -349,14 +359,14 @@
 
   const showXform=()=>{ $('#studioWrap').classList.add('dragging'); $('#transformPop').classList.add('show'); };
   const endDrag=()=> $('#studioWrap').classList.remove('dragging');
-  (function bindMove(){ let md=null;
-    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; showXform(); try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
-    document.addEventListener('pointermove', e=>{ if(!md) return; const r=$('#studioWrap').getBoundingClientRect(); const dx=(e.clientX-md.x)/r.width, dy=(e.clientY-md.y)/r.height; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY}; placeStudio(); });
+  (function bindMove(){ let md=null, rect=null;
+    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; rect=$('#studioWrap').getBoundingClientRect(); showXform(); try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
+    document.addEventListener('pointermove', e=>{ if(!md) return; const dx=(e.clientX-md.x)/rect.width, dy=(e.clientY-md.y)/rect.height; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY}; placeStudio(); });
     document.addEventListener('pointerup', ()=>{ if(md){ md=null; endDrag(); } });
   })();
-  (function bindHandles(){ let drag=null;
-    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; showXform(); try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
-    document.addEventListener('pointermove', e=>{ if(drag===null) return; const r=$('#studioWrap').getBoundingClientRect(); corners[drag]={ x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)), y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height)) }; placeStudio(); });
+  (function bindHandles(){ let drag=null, rect=null;
+    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; rect=$('#studioWrap').getBoundingClientRect(); showXform(); try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
+    document.addEventListener('pointermove', e=>{ if(drag===null) return; corners[drag]={ x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)), y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height)) }; placeStudio(); });
     document.addEventListener('pointerup', ()=>{ if(drag!==null){ drag=null; endDrag(); } });
   })();
   // dismiss the transform popover when clicking away from the rug / popover
@@ -370,9 +380,9 @@
   let split=56;
   function applySplit(){ $('#views').style.setProperty('--split', split+'%'); }
   (function bindSplitter(){
-    const sp=$('#splitter'); let drag=false;
-    sp.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=true; sp.classList.add('drag'); try{sp.setPointerCapture(e.pointerId);}catch(_){ } });
-    document.addEventListener('pointermove', e=>{ if(!drag) return; const v=$('#views').getBoundingClientRect(); split=Math.max(20,Math.min(85,(e.clientX-v.left)/v.width*100)); applySplit(); fitMedia(); });
+    const sp=$('#splitter'); let drag=false, vRect=null;
+    sp.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=true; vRect=$('#views').getBoundingClientRect(); sp.classList.add('drag'); try{sp.setPointerCapture(e.pointerId);}catch(_){ } });
+    document.addEventListener('pointermove', e=>{ if(!drag) return; split=Math.max(20,Math.min(85,(e.clientX-vRect.left)/vRect.width*100)); applySplit(); fitMedia(); });
     document.addEventListener('pointerup', ()=>{ if(drag){ drag=false; sp.classList.remove('drag'); fitMedia(); } });
   })();
   window.addEventListener('resize', fitMedia);
@@ -380,7 +390,7 @@
   // ---------- export / save ----------
   function downloadCanvas(c,name){ c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
-  $('#exportDesign').onclick = ()=>{ const W=1600,s=W/N,c=document.createElement('canvas'); c.width=c.height=W; const x=c.getContext('2d'); for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){ const v=grid[yy][xx]; x.fillStyle=v<0?'#ffffff':palette[v].hex; x.fillRect(xx*s,yy*s,Math.ceil(s),Math.ceil(s)); } downloadCanvas(c,'rug-design.png'); };
+  $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
   $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; groundMask=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
