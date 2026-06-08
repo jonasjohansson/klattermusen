@@ -48,8 +48,8 @@
   .menu .menu-pop label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
   .menu .menu-pop .inline { flex-direction: row; align-items: center; gap: 7px; }
 
-  /* workspace fills the viewport below the header */
-  #workspace { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  /* workspace fills the viewport below the header; dock floats over it */
+  #workspace { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; }
 
   /* two-view workspace */
   #views { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--split, 56%) 1fr; position: relative; background: var(--bg); }
@@ -63,7 +63,8 @@
   .studio-wrap img.bg { width: 100%; height: 100%; display: block; }
   #studioWarp { position: absolute; inset: 0; pointer-events: none; }
   #studioWarp canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
-  .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: grab; touch-action: none; z-index: 5; }
+  .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: grab; touch-action: none; z-index: 5; opacity: 0; transition: opacity .12s; }
+  .studio-wrap:hover .handle, .studio-wrap.dragging .handle { opacity: 1; }
   .handle:active { cursor: grabbing; }
   canvas { display: block; touch-action: none; }
 
@@ -77,8 +78,13 @@
   .clabel { position: absolute; top: 8px; font: 10px var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); pointer-events: none; }
   .clabel.left { left: 10px; } .clabel.right { right: 10px; }
 
-  /* bottom dock — all controls */
-  #dock { flex: 0 0 auto; border-top: 1px solid var(--border); background: var(--panel); padding: 9px 12px; display: flex; flex-direction: column; gap: 8px; max-height: 44vh; overflow: auto; }
+  /* floating, translucent bottom dock — controls left, BOM right */
+  #dock { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 10;
+    display: flex; gap: 12px; padding: 10px 12px; max-height: 48vh;
+    background: rgba(255,255,255,.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 4px 24px rgba(0,0,0,.14); }
+  .dock-left { flex: 1.15; min-width: 0; display: flex; flex-direction: column; gap: 8px; overflow: auto; }
+  .dock-right { flex: 1; min-width: 0; overflow: auto; border-left: 1px solid var(--border); padding-left: 12px; }
   .dock-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .dock-row.tray { gap: 4px; }
   .dock-row .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }

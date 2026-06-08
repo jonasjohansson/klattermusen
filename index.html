@@ -70,6 +70,7 @@
 
   <!-- bottom dock: every control lives here -->
   <div id="dock">
+    <div class="dock-left">
     <div class="dock-row" id="rugColors"></div>
     <div class="dock-row tray" id="paletteTray"></div>
     <div class="dock-row" id="transformRow">
@@ -79,6 +80,20 @@
       <button id="resetCorners">Reset position</button>
       <span class="sep"></span>
       <label class="lbl" style="cursor:pointer;display:flex;gap:6px;align-items:center;"><input type="checkbox" id="showGrid" checked> Grid</label>
+    </div>
+    <div class="dock-row" id="patternRow">
+      <span class="lbl">Background</span>
+      <select id="patType">
+        <option value="plain" selected>Plain</option>
+        <option value="checker">Checker</option>
+        <option value="stripesH">Stripes —</option>
+        <option value="stripesV">Stripes |</option>
+        <option value="diagonal">Diagonal</option>
+        <option value="dots">Dots</option>
+      </select>
+      <span class="lbl">with</span>
+      <select id="patColor"></select>
+      <span class="lbl">Size</span><input type="number" id="patSize" value="20" min="1" max="120">
     </div>
     <div class="dock-row" id="bomControls">
       <span class="lbl">Supplier</span>
@@ -96,7 +111,8 @@
       <span class="lbl">Glue</span><input type="number" id="matGlue" min="0" step="1">
       <span class="lbl">Backing</span><input type="number" id="matBacking" min="0" step="1">
     </div>
-    <div class="dock-row" id="bom"></div>
+    </div><!-- /dock-left -->
+    <div class="dock-right"><div id="bom"></div></div>
   </div>
 </main>
 

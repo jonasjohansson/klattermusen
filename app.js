@@ -64,6 +64,7 @@
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let fillColor = null, recolorTarget = null;
   let showGrid = true, fillMode = false;
+  let groundIdx = null, lastPatColor = null;   // background-pattern state
 
   const undoStack = [], redoStack = [];
   function blankGrid(n){ return Array.from({length:n}, () => new Array(n).fill(-1)); }
@@ -236,7 +237,31 @@
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
-  function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; recolorTarget=to; afterEdit(); }
+  function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; if(groundIdx===from) groundIdx=to; recolorTarget=to; afterEdit(); }
+
+  // ---------- background pattern (fills the dominant 'ground' region with a 2-colour pattern) ----------
+  function populatePatColors(){ const sel=$('#patColor'); sel.innerHTML=''; palette.forEach((c,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=c.name; sel.appendChild(o); }); sel.value='1'; }
+  function applyPattern(){
+    if(groundIdx==null) return;
+    const type=$('#patType').value, pc=+$('#patColor').value, b=Math.max(1,parseInt($('#patSize').value)||20);
+    pushHistory();
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+      const v=grid[y][x];
+      if(v!==groundIdx && v!==pc && v!==lastPatColor) continue;   // only re-pattern the background region
+      let g;
+      switch(type){
+        case 'checker':  g=((Math.floor(x/b)+Math.floor(y/b))&1)===0; break;
+        case 'stripesH': g=(Math.floor(y/b)&1)===0; break;
+        case 'stripesV': g=(Math.floor(x/b)&1)===0; break;
+        case 'diagonal': g=(Math.floor((x+y)/b)&1)===0; break;
+        case 'dots':     g=!((x%(b*2)<b)&&(y%(b*2)<b)); break;
+        default:         g=true;   // plain
+      }
+      grid[y][x]= g?groundIdx:pc;
+    }
+    lastPatColor=pc; afterEdit();
+  }
+  $('#patType').onchange=applyPattern; $('#patColor').onchange=applyPattern; $('#patSize').onchange=applyPattern;
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
@@ -313,6 +338,8 @@
       remap[i]=best;
     }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
+    // dominant colour = the rug's background (target for patterns)
+    { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc)); lastPatColor=null; if($('#patType')) $('#patType').value='plain'; }
     grid=tmp; fillColor=null; afterEdit();
   }
 
@@ -404,7 +431,7 @@
   $('#unitPrice').oninput = renderEstimate;
 
   // ---------- init ----------
-  applySplit(); applyCurtain(); setSupplierDefaults();
+  applySplit(); applyCurtain(); setSupplierDefaults(); populatePatColors();
   grid = blankGrid(N); updateLabels(); afterEdit(); fitMedia();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image();
