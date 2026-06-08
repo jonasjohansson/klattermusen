@@ -63,16 +63,28 @@
   details.adv .body { padding-top: 10px; }
 
   /* ---- workspace layout ---- */
-  .ws { display: grid; grid-template-columns: 340px 1fr; gap: var(--gap); padding: var(--gap); align-items: start; }
+  .ws { display: grid; grid-template-columns: 300px 1fr; gap: var(--gap); padding: var(--gap); align-items: start; }
   @media (max-width: 1000px) { .ws { grid-template-columns: 1fr; } }
-  .views { display: flex; flex-direction: column; gap: var(--gap); }
-  .thumbs { display: flex; gap: var(--gap); flex-wrap: wrap; }
-  .thumb { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; text-align: center; }
-  .thumb canvas { width: 240px; height: 240px; border-radius: 4px; display: block; background: #fbfaf7; }
-  .thumb .cap { font-size: 11px; color: var(--ink-soft); margin-top: 8px; }
-
-  .hero .body { padding: 14px 15px 15px; }
+  .viewrow { display: flex; align-items: flex-start; }
+  .pane { min-width: 90px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; }
+  .pane-h { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--ink-soft); font-weight: 700; margin-bottom: 9px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .pane-h .sub { font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink); }
+  .pane > canvas { width: 100%; height: auto; aspect-ratio: 1; border-radius: 4px; background: #fbfaf7; display: block; }
+  .splitter { align-self: stretch; flex: 0 0 14px; cursor: col-resize; display: flex; align-items: center; justify-content: center; touch-action: none; }
+  .splitter::after { content: ''; width: 4px; height: 48px; border-radius: 2px; background: var(--line); transition: background .12s; }
+  .splitter:hover::after, .splitter.drag::after { background: var(--accent); }
   canvas { display: block; touch-action: none; }
+  .scene-controls { margin-top: 10px; }
+
+  /* curtain compare (artwork ⇄ tufted) */
+  .compare { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; background: #fbfaf7; --cx: 50%; cursor: ew-resize; touch-action: none; }
+  .compare canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  #designCanvas { clip-path: inset(0 calc(100% - var(--cx)) 0 0); }   /* flat artwork on the left of the curtain */
+  .curtain { position: absolute; top: 0; bottom: 0; left: var(--cx); width: 0; pointer-events: none; }
+  .curtain-line { position: absolute; top: 0; bottom: 0; left: -1px; width: 2px; background: #fff; box-shadow: 0 0 0 1px rgba(0,0,0,.3); }
+  .curtain-grip { position: absolute; top: 50%; left: -14px; width: 28px; height: 28px; transform: translateY(-50%); border-radius: 50%; background: var(--accent); border: 2px solid #fff; box-shadow: 0 1px 5px rgba(0,0,0,.45); }
+  .clabel { position: absolute; bottom: 8px; font-size: 10px; background: rgba(0,0,0,.45); color: #fff; padding: 2px 6px; border-radius: 4px; pointer-events: none; letter-spacing: .3px; }
+  .clabel.left { left: 8px; } .clabel.right { right: 8px; }
 
   /* ---- recolour ---- */
   .rc-used { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -89,9 +101,13 @@
   .rc-pick .opt .chip { width: 18px; height: 18px; border-radius: 4px; flex: 0 0 auto; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
   .rc-pick .opt .nm { font-size: 11px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rc-hex { width: 34px; height: 30px; padding: 2px; border-radius: 6px; border: 1px solid var(--line); background: #fff; cursor: pointer; }
+  .dropbtn .chip { width: 16px; height: 16px; border-radius: 4px; display: inline-block; box-shadow: inset 0 0 0 1px rgba(0,0,0,.14); }
+
+  .popover { position: fixed; z-index: 50; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 34px rgba(0,0,0,.20); padding: 11px; width: 286px; }
+  .popover h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--ink-soft); margin: 0 0 9px; font-weight: 700; }
 
   /* ---- studio scene ---- */
-  .studio-wrap { position: relative; width: min(62vw, 720px); max-width: 100%; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin: 0 auto; }
+  .studio-wrap { position: relative; width: 100%; border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.10); }
   .studio-wrap img.bg { width: 100%; display: block; }
   #studioWarp { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
   #studioWarp canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
@@ -163,10 +179,6 @@
         <h2>Recolour</h2>
         <div class="body">
           <div id="recolourList" class="stack"></div>
-          <div class="row" style="margin-top:12px;">
-            <button id="fillToggle" class="ghost" style="flex:1;">🪣 Fill a shape: off</button>
-          </div>
-          <div class="note">Turn on, then click inside a closed shape in the flat design to drop the selected yarn into just that area.</div>
         </div>
       </div>
 
@@ -184,22 +196,23 @@
       </div>
     </div>
 
-    <!-- RIGHT: live views -->
+    <!-- RIGHT: live views, resizable side by side -->
     <div class="views">
-      <div class="panel hero">
-        <h2>In the room</h2>
-        <div class="body">
-          <div class="row" style="justify-content:center; margin-bottom:10px;">
-            <label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Scene
-              <select id="bgSelect" style="width:auto;">
+      <div class="viewrow" id="viewrow">
+
+        <div class="pane" id="paneRoom">
+          <div class="pane-h">
+            <span>In the room</span>
+            <span class="sub">
+              <select id="bgSelect" style="width:auto;display:inline-block;">
                 <option value="room" selected>Gallery floor</option>
-                <option value="studio">Tufting studio (wall)</option>
-                <option value="custom">Uploaded photo…</option>
+                <option value="studio">Studio wall</option>
+                <option value="custom">Uploaded…</option>
               </select>
-            </label>
-            <button id="bgUpload" class="ghost">📷 Upload photo</button>
-            <input type="file" id="bgInput" accept="image/*" hidden>
+              <button id="bgUpload" class="ghost" style="padding:5px 8px;" title="Upload a room photo">📷</button>
+            </span>
           </div>
+          <input type="file" id="bgInput" accept="image/*" hidden>
           <div class="studio-wrap" id="studioWrap">
             <img class="bg" id="studioBg" src="room.jpg" alt="Scene">
             <div id="studioWarp"><canvas id="studioCanvas" width="500" height="500"></canvas></div>
@@ -208,36 +221,40 @@
             <div class="handle" data-corner="2"></div>
             <div class="handle" data-corner="3"></div>
           </div>
-          <div class="row" style="justify-content:center; gap:14px; flex-wrap:wrap; margin-top:10px;">
-            <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">X
-              <input type="number" id="trX" min="-20" max="120" step="1" style="width:54px;"><span style="color:var(--ink-soft)">%</span>
-            </label>
-            <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">Y
-              <input type="number" id="trY" min="-20" max="120" step="1" style="width:54px;"><span style="color:var(--ink-soft)">%</span>
-            </label>
-            <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Scale
-              <input type="range" id="trScale" min="20" max="260" value="100" style="width:100px;"><span id="trScaleV" style="color:var(--ink-soft);width:40px;">100%</span>
-            </label>
-            <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Rotate
-              <input type="range" id="trRot" min="-180" max="180" value="0" style="width:100px;"><span id="trRotV" style="color:var(--ink-soft);width:36px;">0°</span>
-            </label>
-            <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Opacity
-              <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:90px;">
-            </label>
-            <button id="resetCorners" class="ghost">Reset</button>
+          <div class="scene-controls">
+            <div class="row" style="justify-content:center; gap:12px; flex-wrap:wrap;">
+              <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">X
+                <input type="number" id="trX" min="-20" max="120" step="1" style="width:52px;"><span style="color:var(--ink-soft)">%</span>
+              </label>
+              <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">Y
+                <input type="number" id="trY" min="-20" max="120" step="1" style="width:52px;"><span style="color:var(--ink-soft)">%</span>
+              </label>
+              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Scale
+                <input type="range" id="trScale" min="20" max="260" value="100" style="width:96px;"><span id="trScaleV" style="color:var(--ink-soft);width:40px;">100%</span>
+              </label>
+              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Rotate
+                <input type="range" id="trRot" min="-180" max="180" value="0" style="width:96px;"><span id="trRotV" style="color:var(--ink-soft);width:36px;">0°</span>
+              </label>
+              <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Opacity
+                <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:84px;">
+              </label>
+              <button id="resetCorners" class="ghost">Reset</button>
+            </div>
+            <div class="meta">Drag the rug to move it · drag the four corners for perspective.</div>
           </div>
-          <div class="meta">Drag the rug to move it · drag the four corners for perspective.</div>
         </div>
-      </div>
 
-      <div class="thumbs">
-        <div class="thumb">
-          <canvas id="previewCanvas" width="640" height="640"></canvas>
-          <div class="cap">Tufted preview (wool pile)</div>
-        </div>
-        <div class="thumb">
-          <canvas id="designCanvas" width="560" height="560"></canvas>
-          <div class="cap"><label style="cursor:pointer;"><input type="checkbox" id="showGrid" checked> Grid (5cm guides)</label> · click a shape to fill</div>
+        <div class="splitter" data-i="0" title="Drag to resize"></div>
+
+        <div class="pane" id="paneCompare">
+          <div class="pane-h"><span>Artwork ⇄ Tufted</span><label class="sub" style="cursor:pointer;"><input type="checkbox" id="showGrid" checked> Grid</label></div>
+          <div class="compare" id="compare">
+            <canvas id="previewCanvas" width="640" height="640"></canvas>
+            <canvas id="designCanvas" width="560" height="560"></canvas>
+            <div class="curtain" id="curtain"><div class="curtain-line"></div><div class="curtain-grip"></div></div>
+            <span class="clabel left">Artwork</span>
+            <span class="clabel right">Tufted</span>
+          </div>
         </div>
       </div>
     </div>
@@ -292,7 +309,7 @@
   ];
   const CONE_G = 500;
   let conePrice = 17.5;
-  let recolorTarget = null;
+  let fillColor = null;
   let showGrid = true, fillMode = false;
 
   const undoStack = [], redoStack = [];
@@ -378,7 +395,8 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              corners:[ {x:0.620,y:0.378}, {x:0.800,y:0.378}, {x:0.800,y:0.602}, {x:0.620,y:0.602} ] },
+              // upright square centred at X24% / Y52% (Jonas's preferred default)
+              corners:[ {x:0.137,y:0.392}, {x:0.343,y:0.392}, {x:0.343,y:0.648}, {x:0.137,y:0.648} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
     custom: { src:'',           blend:'normal',
@@ -437,56 +455,80 @@
       : 'No design loaded yet.';
   }
 
+  // ---------- yarn picker popover ----------
+  let popoverEl=null;
+  function closePopover(){ if(popoverEl){ popoverEl.remove(); popoverEl=null; document.removeEventListener('pointerdown', popOutside, true); } }
+  function popOutside(e){ if(popoverEl && !popoverEl.contains(e.target)) closePopover(); }
+  function openPicker(anchor, opts){
+    closePopover();
+    const pop=document.createElement('div'); pop.className='popover';
+    const h=document.createElement('h3'); h.textContent=opts.title; pop.appendChild(h);
+    if (opts.showHex && opts.currentIdx!=null){
+      const row=document.createElement('div'); row.className='row'; row.style.marginBottom='9px';
+      const hex=document.createElement('input'); hex.type='color'; hex.className='rc-hex'; hex.value=palette[opts.currentIdx].hex;
+      hex.oninput=()=>{ palette[opts.currentIdx].hex=hex.value; redrawAll(); };
+      const t=document.createElement('div'); t.className='note'; t.style.flex='1'; t.textContent='Fine-tune '+palette[opts.currentIdx].name;
+      row.appendChild(hex); row.appendChild(t); pop.appendChild(row);
+    }
+    const list=document.createElement('div'); list.className='rc-pick';
+    palette.forEach((c,j)=>{
+      const o=document.createElement('div'); o.className='opt'+(j===opts.currentIdx?' sel':'');
+      const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c.hex;
+      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=c.name;
+      o.appendChild(chip); o.appendChild(nm);
+      o.onclick=()=> opts.onPick(j);
+      list.appendChild(o);
+    });
+    pop.appendChild(list);
+    document.body.appendChild(pop);
+    const r=anchor.getBoundingClientRect(), pw=286, ph=pop.offsetHeight;
+    let left=r.left, top=r.bottom+6;
+    if(left+pw>window.innerWidth-8) left=window.innerWidth-8-pw;
+    if(top+ph>window.innerHeight-8) top=Math.max(8, r.top-ph-6);
+    pop.style.left=Math.max(8,left)+'px'; pop.style.top=Math.max(8,top)+'px';
+    popoverEl=pop;
+    setTimeout(()=>document.addEventListener('pointerdown', popOutside, true), 0);
+  }
+
   // ---------- recolour (the main action) ----------
-  function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; recolorTarget=to; afterEdit(); }
+  function remapColour(from, to){ if(from===to) return; pushHistory(); for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to; afterEdit(); }
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
     const used=palette.map((c,i)=>i).filter(i=>counts[i]>0);
     const wrap=$('#recolourList'); wrap.innerHTML='';
     if(!used.length){ wrap.innerHTML='<div class="note">Upload artwork to see its colours here.</div>'; return; }
-    if(recolorTarget==null || recolorTarget>=palette.length) recolorTarget=used[0];
 
-    // used colours (big swatches with names) — click to select which yarn you're working with
+    // the colours in the rug — click one to pick a replacement from the popover
     const usedRow=document.createElement('div'); usedRow.className='rc-used';
     used.forEach(i=>{
-      const it=document.createElement('div'); it.className='item'+(i===recolorTarget?' sel':'');
+      const it=document.createElement('div'); it.className='item';
       const sw=document.createElement('div'); sw.className='sw'; sw.style.background=palette[i].hex;
       const nm=document.createElement('div'); nm.className='nm'; nm.textContent=palette[i].name;
       it.appendChild(sw); it.appendChild(nm);
-      it.onclick=()=>{ recolorTarget=i; renderRecolour(); };
+      it.onclick=()=> openPicker(it, { title:'Replace '+palette[i].name+' with', currentIdx:i, showHex:true, onPick:(j)=>{ remapColour(i,j); closePopover(); } });
       usedRow.appendChild(it);
     });
     wrap.appendChild(usedRow);
+    const hint=document.createElement('div'); hint.className='note'; hint.textContent='Click a colour to swap it for another yarn.'; wrap.appendChild(hint);
 
-    const tuneRow=document.createElement('div'); tuneRow.className='row';
-    const hex=document.createElement('input'); hex.type='color'; hex.className='rc-hex'; hex.value=palette[recolorTarget].hex;
-    hex.title='Fine-tune this yarn’s hex';
-    hex.oninput=()=>{ palette[recolorTarget].hex=hex.value; redrawAll(); };
-    hex.onchange=()=>renderRecolour();
-    const lbl=document.createElement('div'); lbl.className='note'; lbl.style.flex='1';
-    lbl.innerHTML='<strong>'+palette[recolorTarget].name+'</strong> selected — '+(fillMode?'tap a yarn to set the drop colour.':'tap a yarn below to swap it.');
-    tuneRow.appendChild(hex); tuneRow.appendChild(lbl);
-    wrap.appendChild(tuneRow);
-
-    // full yarn picker — every yarn shown with its name visible (no hover needed)
-    const pick=document.createElement('div'); pick.className='rc-pick';
-    palette.forEach((c,j)=>{
-      const o=document.createElement('div'); o.className='opt'+(fillMode && j===recolorTarget ? ' sel':'');
-      const chip=document.createElement('div'); chip.className='chip'; chip.style.background=c.hex;
-      const nm=document.createElement('div'); nm.className='nm'; nm.textContent=c.name;
-      o.appendChild(chip); o.appendChild(nm);
-      // fill mode: picker selects the drop colour; otherwise it swaps the selected yarn everywhere
-      o.onclick=()=> fillMode ? (recolorTarget=j, renderRecolour()) : remapColour(recolorTarget, j);
-      pick.appendChild(o);
-    });
-    wrap.appendChild(pick);
+    // fill a shape
+    const ft=document.createElement('button'); ft.className='ghost'+(fillMode?' primary':''); ft.style.width='100%'; ft.style.marginTop='4px';
+    ft.textContent='🪣 Fill a shape: '+(fillMode?'on':'off');
+    ft.onclick=()=>{ fillMode=!fillMode; if(fillMode && fillColor==null) fillColor=used.includes(10)?10:used[0]; $('#compare').style.cursor=fillMode?'crosshair':'ew-resize'; renderRecolour(); };
+    wrap.appendChild(ft);
+    if (fillMode){
+      const dropBtn=document.createElement('button'); dropBtn.className='ghost dropbtn'; dropBtn.style.width='100%';
+      dropBtn.innerHTML='<span class="chip" style="background:'+palette[fillColor].hex+'"></span>&nbsp; Drop: '+palette[fillColor].name+' ▾';
+      dropBtn.onclick=()=> openPicker(dropBtn, { title:'Drop colour', currentIdx:fillColor, onPick:(j)=>{ fillColor=j; closePopover(); renderRecolour(); } });
+      wrap.appendChild(dropBtn);
+      const fn=document.createElement('div'); fn.className='note'; fn.textContent='Click inside a closed shape in the flat design to drop this yarn.'; wrap.appendChild(fn);
+    }
 
     const undoRow=document.createElement('div'); undoRow.className='row'; undoRow.style.marginTop='4px';
-    const u=document.createElement('button'); u.id='undoBtn'; u.className='ghost'; u.style.flex='1'; u.textContent='↶ Undo'; u.disabled=!undoStack.length; u.onclick=undo;
-    const r=document.createElement('button'); r.id='redoBtn'; r.className='ghost'; r.style.flex='1'; r.textContent='↷ Redo'; r.disabled=!redoStack.length; r.onclick=redo;
-    undoRow.appendChild(u); undoRow.appendChild(r);
-    wrap.appendChild(undoRow);
+    const u=document.createElement('button'); u.className='ghost'; u.style.flex='1'; u.textContent='↶ Undo'; u.disabled=!undoStack.length; u.onclick=undo;
+    const r=document.createElement('button'); r.className='ghost'; r.style.flex='1'; r.textContent='↷ Redo'; r.disabled=!redoStack.length; r.onclick=redo;
+    undoRow.appendChild(u); undoRow.appendChild(r); wrap.appendChild(undoRow);
   }
 
   // ---------- orchestration ----------
@@ -534,7 +576,7 @@
       remap[i]=best;
     }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++) tmp[y][x]=remap[tmp[y][x]];
-    grid=tmp; recolorTarget=null; afterEdit(); showTab('workspace');
+    grid=tmp; fillColor=null; afterEdit(); showTab('workspace');
   }
 
   $('#importBtn').onclick = ()=> $('#imgInput').click();
@@ -584,13 +626,31 @@
   })();
   window.addEventListener('resize', ()=> drawStudio());
 
+  // ---------- resizable view panes (drag the splitters) ----------
+  let paneW = [58, 42];
+  function applyPanes(){ ['paneRoom','paneCompare'].forEach((id,k)=> $('#'+id).style.flex = paneW[k]+' 1 0'); }
+  (function bindSplitters(){
+    let drag=null;
+    document.querySelectorAll('.splitter').forEach(sp=>{
+      sp.addEventListener('pointerdown', e=>{ e.preventDefault(); drag={i:+sp.dataset.i, el:sp, x:e.clientX, w:[...paneW]}; sp.classList.add('drag'); sp.setPointerCapture(e.pointerId); });
+    });
+    document.addEventListener('pointermove', e=>{
+      if(!drag) return;
+      const total=$('#viewrow').clientWidth||1, d=(e.clientX-drag.x)/total*100, a=drag.i, b=drag.i+1;
+      let wa=drag.w[a]+d, wb=drag.w[b]-d; const min=12;
+      if(wa<min){ wb-=(min-wa); wa=min; } if(wb<min){ wa-=(min-wb); wb=min; }
+      paneW[a]=wa; paneW[b]=wb; applyPanes(); drawStudio();
+    });
+    document.addEventListener('pointerup', ()=>{ if(drag){ drag.el.classList.remove('drag'); drag=null; drawStudio(); } });
+  })();
+
   // ---------- export / save ----------
   function downloadCanvas(c,name){ c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
   $('#exportDesign').onclick = ()=>{ const W=1600,s=W/N,c=document.createElement('canvas'); c.width=c.height=W; const x=c.getContext('2d'); for(let yy=0;yy<N;yy++)for(let xx=0;xx<N;xx++){ const v=grid[yy][xx]; x.fillStyle=v<0?'#ffffff':palette[v].hex; x.fillRect(xx*s,yy*s,Math.ceil(s),Math.ceil(s)); } downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
-  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; recolorTarget=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
+  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; fillColor=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
 
   // ---------- fill a shape (drop a colour into a closed region) ----------
   function floodFillAt(cx,cy,to){
@@ -601,19 +661,22 @@
     while(st.length){ const [x,y]=st.pop(); if(x<0||y<0||x>=N||y>=N) continue; if(grid[y][x]!==from) continue; grid[y][x]=to; st.push([x+1,y],[x-1,y],[x,y+1],[x,y-1]); }
     afterEdit();
   }
-  designCanvas.addEventListener('click', e=>{
-    if(!fillMode) return;
-    const r=designCanvas.getBoundingClientRect();
-    const x=Math.floor((e.clientX-r.left)/r.width*N), y=Math.floor((e.clientY-r.top)/r.height*N);
-    floodFillAt(Math.max(0,Math.min(N-1,x)), Math.max(0,Math.min(N-1,y)), recolorTarget);
-  });
-  $('#fillToggle').onclick = ()=>{
-    fillMode=!fillMode;
-    $('#fillToggle').classList.toggle('primary', fillMode);
-    $('#fillToggle').textContent='🪣 Fill a shape: '+(fillMode?'on — click a shape':'off');
-    designCanvas.style.cursor = fillMode ? 'crosshair' : 'default';
-    renderRecolour();
-  };
+  // ---------- compare curtain (drag to reveal artwork vs tufted) + fill clicks ----------
+  let curtainX = 50, curtainDrag = false;
+  function applyCurtain(){ $('#compare').style.setProperty('--cx', curtainX+'%'); }
+  (function bindCompare(){
+    const cmp=$('#compare');
+    function moveCurtain(e){ const r=cmp.getBoundingClientRect(); curtainX=Math.max(2,Math.min(98,(e.clientX-r.left)/r.width*100)); applyCurtain(); }
+    cmp.addEventListener('pointerdown', e=>{ if(fillMode) return; e.preventDefault(); curtainDrag=true; try{ cmp.setPointerCapture(e.pointerId); }catch(_){ } moveCurtain(e); });
+    cmp.addEventListener('pointermove', e=>{ if(curtainDrag) moveCurtain(e); });
+    cmp.addEventListener('pointerup', ()=> curtainDrag=false);
+    cmp.addEventListener('click', e=>{
+      if(!fillMode || fillColor==null) return;
+      const r=cmp.getBoundingClientRect();
+      const x=Math.floor((e.clientX-r.left)/r.width*N), y=Math.floor((e.clientY-r.top)/r.height*N);
+      floodFillAt(Math.max(0,Math.min(N-1,x)), Math.max(0,Math.min(N-1,y)), fillColor);
+    });
+  })();
   $('#showGrid').onchange = e => { showGrid=e.target.checked; drawDesign(); };
 
   // ---------- keyboard ----------
@@ -622,6 +685,7 @@
   $('#conePrice').oninput = renderEstimate;
 
   // ---------- init ----------
+  applyPanes(); applyCurtain();
   grid = blankGrid(N); updateLabels(); afterEdit();
   fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
     $('#importInvert').checked=true; const img=new Image(); img.onload=()=>importImage(img); img.src=URL.createObjectURL(b);

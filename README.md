@@ -15,16 +15,16 @@ next to it; the one-click/auto logo load only works over localhost).
 ## Two tabs
 
 ### Workspace
-Everything live at once — edits ripple across all three views:
+Two live views side by side (drag the splitter between them), edits ripple across both:
 - **In the room** (hero) — the rug warped into a scene: gallery floor (`room.jpg`),
   tufting studio wall (`studio.jpg`), or your own uploaded photo. Drag the rug to
   move it, drag the four corners for perspective, X/Y/scale/rotate/opacity to fine-tune.
-- **Tufted preview** — simulated cut-pile wool.
-- **Flat design** — the source grid; yellow lines mark the 5cm guidelines woven into
-  the Tufting Europe cloth. Toggle the grid on/off.
-- **Recolour** (the main action) — every yarn used in the rug as big swatches; pick a
-  replacement from the full Tufting Europe range to swap it everywhere, or fine-tune
-  the hex. Undo/redo.
+- **Artwork ⇄ Tufted** — a curtain-compare: flat artwork on one side, simulated wool
+  pile on the other, with a vertical divider you drag left/right to reveal more of
+  either. Yellow lines mark the 5cm cloth guidelines; toggle the grid on/off.
+- **Recolour** (the main action) — every yarn used in the rug as big named swatches;
+  click one to open a popover of the full Tufting Europe range and swap it everywhere,
+  or fine-tune the hex. Undo/redo.
 - **Fill a shape** — turn it on and click inside a closed region of the flat design to
   drop the selected yarn into just that area (e.g. inside a letter or the mouse).
 - **Artwork** — upload an image or load the logo. Import settings (detail up to
