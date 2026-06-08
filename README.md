@@ -13,12 +13,14 @@ Open via the local server:
 
 ## What it does
 - **Design** — paint a 2×2m grid. Brush / fill / eyedropper / erase, brush size,
-  symmetry (mirror, 4-way, rotate). Resolution 10–200 cells/side; default
-  **200×200 (1cm tufts)** to match the yarn gauge. Yellow gridlines mark the 5cm
+  symmetry (mirror, 4-way, rotate). Resolution 10–500 cells/side; default
+  **400×400 (5mm tufts ≈ cut-pile gauge)**. Yellow gridlines mark the 5cm
   guidelines woven into the Tufting Europe primary cloth.
 - **Import a print** — load any image (or one-click the bundled Klättermusens
   logo) and map it onto the grid in the nearest yarn colours, with colour
-  reduction and a line-art mode for logos.
+  reduction and a line-art mode for logos. The Klättermusens logo
+  (`logo.png`, rasterised from the supplied SVG) **auto-loads on startup** when
+  served over localhost.
 - **Tufted preview** — renders the design as simulated cut-pile wool.
 - **In room / studio** — lays the rug into a scene: the gallery floor (`room.jpg`),
   the tufting studio wall (`studio.jpg`), or your own uploaded photo. Drag the four
