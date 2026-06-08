@@ -65,6 +65,7 @@
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let recolorTarget = null;
   let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
+  let chipOrder = [];   // stable slot order for the in-rug chips (so recolouring doesn't reshuffle them)
 
   const undoStack = [], redoStack = [];
   function blankGrid(n){ return Array.from({length:n}, () => new Array(n).fill(-1)); }
@@ -236,6 +237,7 @@
     // keep pattern state in sync so re-patterning doesn't stack old colours
     if(groundIdx===from) groundIdx=to;
     if(patternB===from) patternB=to;
+    const oi=chipOrder.indexOf(from); if(oi>=0){ chipOrder[oi]=to; chipOrder=chipOrder.filter((v,idx)=> idx===oi || v!==to); }  // keep the same slot
     recolorTarget=to; afterEdit();
   }
 
@@ -245,6 +247,7 @@
     if(!groundMask) return;
     const type=$('#patType').value, b=Math.max(1,parseInt($('#patSize').value)||40);
     if(type==='checker' && patternB==null) patternB=defaultPatternB();
+    if(patternB!=null && !chipOrder.includes(patternB)) chipOrder.push(patternB);   // alt background = last slot
     pushHistory();
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){
       if(!groundMask[y*N+x]) continue;                            // pattern only touches captured background cells
@@ -261,13 +264,14 @@
     const rc=$('#rugColors'), tray=$('#paletteTray'); rc.innerHTML=''; tray.innerHTML='';
     if(!used.length){ rc.innerHTML='<span class="lbl">Upload artwork to begin</span>'; return; }
     if(recolorTarget==null || recolorTarget>=palette.length) recolorTarget=used[0];
+    const ordered=chipOrder.filter(i=>counts[i]>0); used.forEach(i=>{ if(!ordered.includes(i)) ordered.push(i); });   // stable slots; new colours appended
 
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
-    used.forEach(i=>{
+    ordered.forEach(i=>{
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
-      const role=document.createElement('span'); role.className='role'; role.textContent=(i===groundIdx||i===patternB)?'background':'symbol';
+      const role=document.createElement('span'); role.className='role'; role.textContent= i===groundIdx?'background' : (i===patternB?'alt background':'symbol');
       chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
       chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
@@ -328,7 +332,10 @@
     // dominant colour = the rug's background; capture a fixed mask so patterns never touch the symbol
     { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc));
       groundMask=new Uint8Array(N*N); for(let y=0;y<N;y++)for(let x=0;x<N;x++) groundMask[y*N+x]= tmp[y][x]===groundIdx?1:0;
-      patternB=null; if($('#patType')) $('#patType').value='plain'; }
+      patternB=null;
+      const usedNow=cc.map((n,i)=>i).filter(i=>cc[i]>0);
+      chipOrder=[ ...usedNow.filter(i=>i!==groundIdx), groundIdx ];   // symbols first, background last
+      if($('#patType')) $('#patType').value='plain'; }
     grid=tmp; afterEdit();
   }
 
@@ -393,7 +400,7 @@
   $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
-  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; groundMask=null; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
+  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; groundMask=null; chipOrder=[]; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
 
   // ---------- compare curtain (drag to reveal artwork vs tufted) ----------
   let curtainX = 50, curtainDrag = false;
