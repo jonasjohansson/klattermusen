@@ -21,10 +21,13 @@ Open via the local server:
   reduction and a line-art mode for logos. The Klättermusens logo
   (`logo.png`, rasterised from the supplied SVG) **auto-loads on startup** when
   served over localhost.
+- **Colours in design** — every yarn used in the rug, with a chip to fine-tune its
+  hex and a menu to swap it for another shade everywhere at once.
 - **Tufted preview** — renders the design as simulated cut-pile wool.
 - **In room / studio** — lays the rug into a scene: the gallery floor (`room.jpg`),
-  the tufting studio wall (`studio.jpg`), or your own uploaded photo. Drag the four
-  corners to place it in perspective; opacity slider. Good for presenting to a client.
+  the tufting studio wall (`studio.jpg`), or your own uploaded photo. Transform tool:
+  drag the rug to move it, drag the four corners for perspective, X/Y position inputs,
+  scale and rotate sliders, opacity. Good for presenting to a client.
 - **Yarn palette** — mirrors the Tufting Europe 100% NZ-wool range (500g cones).
   Add/edit/remove colours freely.
 - **Yarn estimate** — per-colour kg + whole cones to order, total cones and €cost.

@@ -128,7 +128,7 @@
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     pointer-events: none; mix-blend-mode: multiply;
   }
-  #studioWarp canvas { position: absolute; top:0; left:0; transform-origin: 0 0; }
+  #studioWarp canvas { position: absolute; top:0; left:0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
   .handle {
     position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
     border-radius: 50%; background: var(--accent); border: 2px solid #fff;
@@ -309,18 +309,40 @@
         <div class="handle" data-corner="2"></div>
         <div class="handle" data-corner="3"></div>
       </div>
+      <div class="row" style="justify-content:center; gap:14px; flex-wrap:wrap;">
+        <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">X
+          <input type="number" id="trX" min="-20" max="120" step="1" style="width:56px;"><span style="color:var(--ink-soft)">%</span>
+        </label>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:5px;">Y
+          <input type="number" id="trY" min="-20" max="120" step="1" style="width:56px;"><span style="color:var(--ink-soft)">%</span>
+        </label>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Scale
+          <input type="range" id="trScale" min="30" max="260" value="100" style="width:110px;"><span id="trScaleV" style="color:var(--ink-soft);width:40px;">100%</span>
+        </label>
+        <label class="fld" style="flex-direction:row;align-items:center;gap:6px;">Rotate
+          <input type="range" id="trRot" min="-180" max="180" value="0" style="width:110px;"><span id="trRotV" style="color:var(--ink-soft);width:36px;">0°</span>
+        </label>
+      </div>
       <div class="row" style="justify-content:center;">
         <label class="fld" style="flex-direction:row;align-items:center;gap:8px;">Opacity
-          <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:140px;">
+          <input type="range" id="studioOpacity" min="20" max="100" value="100" style="width:120px;">
         </label>
         <button id="resetCorners" class="ghost">Reset placement</button>
       </div>
-      <div class="meta">Drag the four corners to lay the 2×2m rug onto the floor, then show the client.</div>
+      <div class="meta">Drag the rug to move it · drag the four corners for perspective · sliders to scale &amp; rotate.</div>
     </div>
   </div>
 
-  <!-- RIGHT: estimate + export -->
+  <!-- RIGHT: recolour + estimate + export -->
   <div class="stack">
+    <div class="panel">
+      <h2>Colours in design</h2>
+      <div class="body">
+        <div id="recolourList" class="stack"></div>
+        <div class="note">Each colour used in the rug. Pick a different yarn from the menu to swap it everywhere, or use the chip to fine-tune the hex.</div>
+      </div>
+    </div>
+
     <div class="panel">
       <h2>Yarn estimate</h2>
       <div class="body">
@@ -628,6 +650,7 @@
     studioCanvas.style.opacity = ($('#studioOpacity').value/100).toFixed(2);
     $('#studioWarp').style.mixBlendMode = BG[bgKey].blend;
     positionHandles();
+    syncXY();
   }
   function positionHandles(){
     const wrap = $('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
@@ -686,12 +709,40 @@
 
   // ---------- orchestration ----------
   let activeView = 'design';
-  function afterEdit(){
+  function redrawAll(){
     drawDesign();
     if (activeView==='preview') drawTufted(pctx, previewCanvas.width);
     if (activeView==='studio') drawStudio();
     renderSwatches();
     renderEstimate();
+  }
+  function afterEdit(){ redrawAll(); renderRecolour(); }
+
+  // ---------- recolour: swap / tweak the yarns used in the design ----------
+  function remapColour(from, to){
+    if (from===to) return;
+    pushHistory();
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++) if (grid[y][x]===from) grid[y][x]=to;
+    afterEdit();
+  }
+  function renderRecolour(){
+    const counts=new Array(palette.length).fill(0);
+    for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    const used = palette.map((c,i)=>i).filter(i=>counts[i]>0);
+    const wrap=$('#recolourList'); wrap.innerHTML='';
+    if (!used.length){ wrap.innerHTML='<div class="note">Paint or import a design to see its colours.</div>'; return; }
+    used.forEach(i=>{
+      const row=document.createElement('div'); row.className='row'; row.style.gap='6px';
+      const ci=document.createElement('input'); ci.type='color'; ci.value=palette[i].hex;
+      ci.style.cssText='width:30px;height:28px;padding:2px;border:1px solid var(--line);border-radius:6px;background:#fff;cursor:pointer;flex:0 0 auto;';
+      ci.title='Fine-tune this yarn’s colour';
+      ci.oninput=()=>{ palette[i].hex=ci.value; redrawAll(); };   // soft redraw keeps this input alive while dragging
+      const sel=document.createElement('select'); sel.style.flex='1';
+      palette.forEach((c,j)=>{ const o=document.createElement('option'); o.value=j; o.textContent=c.name; if(j===i)o.selected=true; sel.appendChild(o); });
+      sel.title='Swap to another yarn';
+      sel.onchange=()=>remapColour(i, +sel.value);
+      row.appendChild(ci); row.appendChild(sel); wrap.appendChild(row);
+    });
   }
 
   function setView(v){
@@ -780,13 +831,14 @@
 
   // ---------- studio handles ----------
   $('#studioOpacity').oninput = drawStudio;
-  $('#resetCorners').onclick = ()=>{ corners=JSON.parse(JSON.stringify(BG[bgKey].corners)); drawStudio(); };
+  $('#resetCorners').onclick = ()=>{ corners=JSON.parse(JSON.stringify(BG[bgKey].corners)); resetTransformControls(); drawStudio(); };
 
   function setBackground(key){
     bgKey = key;
     const img = $('#studioBg');
     const src = (key==='custom') ? BG.custom.src : BG[key].src;
     corners = JSON.parse(JSON.stringify(BG[key].corners));
+    resetTransformControls();
     if (src){ img.onload = drawStudio; img.src = src; }
     else { drawStudio(); }
   }
@@ -799,6 +851,51 @@
     setBackground('custom');
     e.target.value='';
   };
+
+  // ---------- studio transform tool: move / scale / rotate / XY ----------
+  function centroid(){ let x=0,y=0; corners.forEach(c=>{x+=c.x;y+=c.y;}); return {x:x/4, y:y/4}; }
+  function syncXY(){
+    const c=centroid(), X=$('#trX'), Y=$('#trY');
+    if (document.activeElement!==X) X.value=Math.round(c.x*100);
+    if (document.activeElement!==Y) Y.value=Math.round(c.y*100);
+  }
+  let lastScale=1, lastRot=0;
+  function resetTransformControls(){
+    lastScale=1; lastRot=0;
+    $('#trScale').value=100; $('#trScaleV').textContent='100%';
+    $('#trRot').value=0; $('#trRotV').textContent='0°';
+  }
+  $('#trScale').oninput = e=>{
+    const v=(+e.target.value)/100, f=v/lastScale; lastScale=v;
+    $('#trScaleV').textContent=Math.round(v*100)+'%';
+    const c=centroid(); corners.forEach(p=>{ p.x=c.x+(p.x-c.x)*f; p.y=c.y+(p.y-c.y)*f; });
+    drawStudio();
+  };
+  $('#trRot').oninput = e=>{
+    const a=(+e.target.value)*Math.PI/180, d=a-lastRot; lastRot=a;
+    $('#trRotV').textContent=(+e.target.value)+'°';
+    const wrap=$('#studioWrap'), W=wrap.clientWidth||1, H=wrap.clientHeight||1;
+    const c=centroid(), cx=c.x*W, cy=c.y*H, cos=Math.cos(d), sin=Math.sin(d);
+    corners.forEach(p=>{ const x=p.x*W-cx, y=p.y*H-cy; p.x=(cx + x*cos - y*sin)/W; p.y=(cy + x*sin + y*cos)/H; });
+    drawStudio();
+  };
+  function moveCentroidTo(nx,ny){ const c=centroid(), dx=nx-c.x, dy=ny-c.y; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); drawStudio(); }
+  $('#trX').oninput = e=>{ moveCentroidTo((+e.target.value)/100, centroid().y); };
+  $('#trY').oninput = e=>{ moveCentroidTo(centroid().x, (+e.target.value)/100); };
+
+  // drag the rug body itself to reposition (corners stay for perspective)
+  (function bindMove(){
+    let md=null;
+    studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; studioCanvas.setPointerCapture(e.pointerId); });
+    document.addEventListener('pointermove', e=>{
+      if(!md) return;
+      const r=$('#studioWrap').getBoundingClientRect();
+      const dx=(e.clientX-md.x)/r.width, dy=(e.clientY-md.y)/r.height;
+      corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY};
+      drawStudio();
+    });
+    document.addEventListener('pointerup', ()=> { md=null; });
+  })();
   (function bindHandles(){
     let drag=null;
     document.querySelectorAll('.handle').forEach(h=>{
