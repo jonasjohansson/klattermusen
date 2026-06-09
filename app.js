@@ -59,7 +59,7 @@
   const SUPPLIERS = {
     te:          { label:'Tufting Europe', cur:'kr', unit:'cone', coneG:500, price:198, link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:509, glue:226, backing:203}, ship:0 },
     tuftingshop: { label:'Tufting Shop',   cur:'kr', unit:'cone', coneG:500, price:202, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:509, glue:226, backing:203}, ship:0 },
-    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190}, ship:199 },
+    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190}, ship:1000 },
   };
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
@@ -214,9 +214,9 @@
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
-    const ship=sup.ship||0, matSum=m.cloth+m.glue+m.backing+ship;
+    const ship=sup.ship||0, build=500, matSum=m.cloth+m.glue+m.backing+build+ship;   // build = general construction materials
     if (filled){
-      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing],['Shipping',ship]].forEach(([nm,cost])=>{
+      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing],['Construction materials',build],['Shipping',ship]].forEach(([nm,cost])=>{
         rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
