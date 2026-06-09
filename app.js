@@ -290,6 +290,13 @@
   }
   $('#bgPatBtn').onclick = ()=> $('#bgPatInput').click();
   $('#bgPatInput').onchange = e=>{ const f=e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>applyBgImage(img); img.onerror=()=>alert('Could not load image.'); img.src=URL.createObjectURL(f); e.target.value=''; };
+  // built-in pattern library
+  const PATTERNS=['patterns/floral-1.jpg','patterns/floral-2.jpg','patterns/botanical-1.jpg'];
+  function buildPatLib(){ const wrap=$('#patLib'); if(!wrap) return; wrap.innerHTML=''; PATTERNS.forEach(src=>{
+    const b=document.createElement('button'); b.className='pat-thumb'; b.style.backgroundImage='url('+src+')'; b.title=src.split('/').pop().replace(/\.\w+$/,'');
+    b.onclick=()=>{ const img=new Image(); img.onload=()=>applyBgImage(img); img.onerror=()=>alert('Could not load pattern.'); img.src=src; };
+    wrap.appendChild(b);
+  }); }
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
@@ -475,7 +482,7 @@
   $('#clearAll').onclick = ()=>{ if(confirm('Reset to the Klättermusens logo and clear your saved design?')){ try{ localStorage.removeItem(LS_KEY); }catch(_){ } location.reload(); } };
 
   // ---------- init ----------
-  applySplit(); applyCurtain();
+  applySplit(); applyCurtain(); buildPatLib();
   grid = blankGrid(N); updateLabels();
   if (!loadState()){                                           // restore saved work, else auto-load the logo
     afterEdit(); fitMedia();

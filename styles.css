@@ -119,6 +119,9 @@
   .tray-sw { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; padding: 0; }
   .tray-sw:hover { border-color: var(--fg); }
   .tray-sw.active { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .patlib { display: inline-flex; gap: 4px; }
+  .pat-thumb { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background-size: cover; background-position: center; cursor: pointer; }
+  .pat-thumb:hover { border-color: var(--fg); }
   .rc-tool { width: 28px; height: 28px; padding: 0; font-size: 13px; }
   .rc-tool.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
   /* sold-out yarns: dimmed with a diagonal hatch overlay */
