@@ -214,7 +214,7 @@
       const ok=sup.stock(c); if(!ok) anyOOS=true;
       rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
-        `<td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+        `<td class="qty">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
     // Tufting Europe sourced items (one cloth + one backing + the gun), converted EUR→SEK
     const EUR=11.4, teCloth='https://tuftingeurope.com/product/primary-tufting-cloth-300x300cm/', teBack='https://tuftingeurope.com/product/non-slippery-secondary-backing-cloth-200x200cm/', teGun='https://tuftingeurope.com/product/ak-v-tufting-machine/';
@@ -223,7 +223,7 @@
     if (filled){
       [['Tufting cloth · TE 3×3 m',cloth,teCloth],['Backing cloth · TE 2×2 m',backing,teBack],['Glue',glue,null],['Construction materials',build,null],['AK-V tufting gun · one-time',gun,teGun],['Shipping',ship,null]].forEach(([nm,cost,link])=>{
         const label = link ? `<a href="${link}" target="_blank" rel="noopener">${nm}</a>` : nm;
-        rows+=`<tr class="mat"><td class="c"></td><td>${label}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+        rows+=`<tr class="mat"><td class="c"></td><td>${label}</td><td class="qty"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
     const grand=totalCost+matSum;
