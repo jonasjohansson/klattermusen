@@ -108,6 +108,9 @@
   /* BOM lives in the header menu */
   #bomMenu .menu-pop { width: 320px; max-height: 70vh; overflow: auto; }
   #bomMenu .menu-pop > select { width: 100%; }
+  .pile-row { display: flex; align-items: center; gap: 6px; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 8px 0 2px; }
+  .pile-row input { width: 52px; }
+  .pile-row .note { text-transform: none; letter-spacing: 0; }
   .dock-row.tray { gap: 4px; }
   .dock-row .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .dock-row .sep { width: 1px; height: 20px; background: var(--border); margin: 0 5px; }

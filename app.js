@@ -62,6 +62,7 @@
     hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190}, ship:1000 },
   };
   let supplier = 'hitex';
+  let pileMM = 14;   // cut-pile height in mm; drives the yarn face weight
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let recolorTarget = null, recolorSymbol = false;
   let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
@@ -195,9 +196,10 @@
   }
 
   // ---------- estimate ----------
-  const DENSITY = 2.6;   // kg/m² pile — fixed
+  const PILE_KG_PER_MM = 0.24;   // wool cut-pile face weight ≈ 0.24 kg/m² per mm of pile
   function renderEstimate(){
     const sup=SUPPLIERS[supplier], price=sup.price, m=sup.mat;
+    const DENSITY = pileMM * PILE_KG_PER_MM;   // kg/m² face weight, derived from pile height
     const counts=new Array(palette.length).fill(0); let filled=0;
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
     const cellArea=(RUG_M/N)*(RUG_M/N);
@@ -214,10 +216,14 @@
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
-    const ship=sup.ship||0, build=500, matSum=m.cloth+m.glue+m.backing+build+ship;   // build = general construction materials
+    // Tufting Europe sourced items (one cloth + one backing + the gun), converted EUR→SEK
+    const EUR=11.4, teCloth='https://tuftingeurope.com/product/primary-tufting-cloth-300x300cm/', teBack='https://tuftingeurope.com/product/non-slippery-secondary-backing-cloth-200x200cm/', teGun='https://tuftingeurope.com/product/ak-v-tufting-machine/';
+    const cloth=Math.round(45*EUR), backing=Math.round(18*EUR), gun=Math.round(181.82*EUR), glue=m.glue, build=500, ship=sup.ship||0;
+    const matSum=cloth+backing+glue+build+gun+ship;
     if (filled){
-      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing],['Construction materials',build],['Shipping',ship]].forEach(([nm,cost])=>{
-        rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
+      [['Tufting cloth · TE 3×3 m',cloth,teCloth],['Backing cloth · TE 2×2 m',backing,teBack],['Glue',glue,null],['Construction materials',build,null],['AK-V tufting gun · one-time',gun,teGun],['Shipping',ship,null]].forEach(([nm,cost,link])=>{
+        const label = link ? `<a href="${link}" target="_blank" rel="noopener">${nm}</a>` : nm;
+        rows+=`<tr class="mat"><td class="c"></td><td>${label}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
     const grand=totalCost+matSum;
@@ -381,6 +387,7 @@
 
   // ---------- supplier (BOM pricing / links / stock) ----------
   $('#supplier').onchange = e=>{ supplier=e.target.value; renderEstimate(); renderRecolour(); queueSave(); };
+  $('#pileMM').onchange = e=>{ pileMM=Math.max(6,Math.min(40, parseInt(e.target.value)||25)); e.target.value=pileMM; renderEstimate(); queueSave(); };
 
   // ---------- import artwork ----------
   const palRgb = () => palette.map(c=>hexToRgb(c.hex));
@@ -498,7 +505,7 @@
   const LS_KEY='klattermusen.v1';
   let saveTimer=null;
   function saveState(){
-    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, bgColors:[...bgColors], chipOrder, corners, recolorTarget, supplier, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, bgColors:[...bgColors], chipOrder, corners, recolorTarget, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
   }
   function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 400); }
   function loadState(){
@@ -510,6 +517,7 @@
       bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));
       if(d.corners) corners=d.corners;
       if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
+      if(d.pileMM){ pileMM=d.pileMM; const el=$('#pileMM'); if(el) el.value=pileMM; }
       if(d.patType){ $('#patType').value=d.patType; } if(d.patSize) $('#patSize').value=d.patSize;
       groundMask=new Uint8Array(N*N);                          // background region = cells holding a background colour
       for(let y=0;y<N;y++)for(let x=0;x<N;x++){ groundMask[y*N+x]= bgColors.has(grid[y][x])?1:0; }
