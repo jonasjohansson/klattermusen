@@ -133,7 +133,7 @@
   .rc-sw.oos, .tray-sw.oos { opacity: .8; }
   .rc-sw.oos::after, .tray-sw.oos::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(255,255,255,.85) 0 1.5px, transparent 1.5px 5px); }
   /* grounding shadow so the rug sits in the room */
-  #studioWarp canvas { filter: drop-shadow(0 6px 11px rgba(0,0,0,.4)); }
+  #studioWarp canvas { filter: drop-shadow(0 4px 8px rgba(0,0,0,.26)); }
 
   /* in-rug colour chips (swatch + name) */
   .rc-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; padding: 2px 9px 2px 2px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); }
