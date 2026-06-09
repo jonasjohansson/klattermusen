@@ -57,9 +57,9 @@
   // All prices in SEK. EUR suppliers converted at ~11.3 SEK/€ (Tufting Europe €17.50/cone ≈ 198 kr).
   // mat = rough material costs (cloth, glue, backing) for a 2×2m rug.
   const SUPPLIERS = {
-    te:          { label:'Tufting Europe', cur:'kr', unit:'cone', coneG:500, price:198, link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:509, glue:226, backing:203} },
-    tuftingshop: { label:'Tufting Shop',   cur:'kr', unit:'cone', coneG:500, price:202, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:509, glue:226, backing:203} },
-    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190} },
+    te:          { label:'Tufting Europe', cur:'kr', unit:'cone', coneG:500, price:198, link:c=>'https://tuftingeurope.com/product/'+c.u+'-tufting-yarn-500g-wool/', stock:c=>!!c.s, mat:{cloth:509, glue:226, backing:203}, ship:0 },
+    tuftingshop: { label:'Tufting Shop',   cur:'kr', unit:'cone', coneG:500, price:202, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:509, glue:226, backing:203}, ship:0 },
+    hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190}, ship:199 },
   };
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
@@ -213,9 +213,9 @@
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="n">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
-    const matSum=m.cloth+m.glue+m.backing;
+    const ship=sup.ship||0, matSum=m.cloth+m.glue+m.backing+ship;
     if (filled){
-      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing]].forEach(([nm,cost])=>{
+      [['Tufting cloth',m.cloth],['Glue',m.glue],['Backing',m.backing],['Shipping',ship]].forEach(([nm,cost])=>{
         rows+=`<tr class="mat"><td class="c"></td><td>${nm}</td><td class="n"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
@@ -245,7 +245,7 @@
   function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
   function applyPattern(){
     if(!groundMask) return;
-    const type=$('#patType').value, b=Math.max(1,parseInt($('#patSize').value)||40);
+    const type=$('#patType').value, count=Math.max(1,parseInt($('#patSize').value)||8), b=Math.max(1,Math.round(N/count));   // Squares = checker squares per side
     if(type==='checker' && patternB==null) patternB=defaultPatternB();
     if(patternB!=null && !chipOrder.includes(patternB)) chipOrder.push(patternB);   // alt background = last slot
     pushHistory();
