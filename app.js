@@ -138,8 +138,8 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              // upright square centred at X40% / Y52%, scale 117% (Jonas's preferred default)
-              corners:[ {x:0.220,y:0.297}, {x:0.580,y:0.297}, {x:0.580,y:0.743}, {x:0.220,y:0.743} ] },
+              // upright square centred at X37% / Y48%, scale 113% (Jonas's preferred default)
+              corners:[ {x:0.167,y:0.228}, {x:0.573,y:0.228}, {x:0.573,y:0.732}, {x:0.167,y:0.732} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
     custom: { src:'',           blend:'normal',
@@ -290,9 +290,13 @@
   function applyBgImage(img){
     if(!groundMask) return;
     const k=Math.max(2,Math.min(8,parseInt($('#bgColorsN').value)||4));
+    const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
+    // flatten for tufting: cover-fit into a SMALL canvas (kills texture/gradients), then smooth-upscale to N
+    const sm=Math.max(48, Math.min(120, Math.round(N/4)));
+    const tiny=document.createElement('canvas'); tiny.width=tiny.height=sm; const tg=tiny.getContext('2d'); tg.imageSmoothingEnabled=true;
+    const ts=Math.max(sm/iw, sm/ih), tw=iw*ts, th=ih*ts; tg.drawImage(img,(sm-tw)/2,(sm-th)/2,tw,th);
     const off=document.createElement('canvas'); off.width=off.height=N; const o=off.getContext('2d');
-    const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, sc=Math.max(N/iw,N/ih), dw=iw*sc, dh=ih*sc;
-    o.imageSmoothingEnabled=true; o.drawImage(img,(N-dw)/2,(N-dh)/2,dw,dh);
+    o.imageSmoothingEnabled=true; o.drawImage(tiny,0,0,N,N);
     const data=o.getImageData(0,0,N,N).data, rgbs=palRgb();
     // exclude the symbol's colours (those used outside the mask) so the background never collides with the logo
     const symbolSet=new Set();
@@ -305,7 +309,18 @@
     const kept=Object.keys(counts).map(Number).sort((a,b)=>counts[b]-counts[a]).slice(0,k), keptRgb=kept.map(i=>rgbs[i]), remap={};
     for(const i of Object.keys(counts).map(Number)){ if(kept.includes(i)){remap[i]=i;continue;} const [r,g,b]=rgbs[i]; let best=kept[0],bd=Infinity; kept.forEach((ki,ji)=>{const[pr,pg,pb]=keptRgb[ji];const d=(pr-r)**2+(pg-g)**2+(pb-b)**2;if(d<bd){bd=d;best=ki;}}); remap[i]=best; }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const t=tmpIdx[y*N+x]; if(t<0)continue; grid[y][x]=remap[t]; }
-    bgColors=new Set(kept.map(i=>remap[i]));
+    // despeckle: majority-filter passes so the background tufts as clean contiguous areas (no lone tufts)
+    for(let pass=0; pass<2; pass++){
+      const copy=grid.map(r=>r.slice());
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+        if(!groundMask[y*N+x]) continue;
+        const t={};
+        for(const [dx,dy] of [[0,0],[1,0],[-1,0],[0,1],[0,-1],[1,1],[-1,-1],[1,-1],[-1,1]]){ const nx=x+dx,ny=y+dy; if(nx<0||ny<0||nx>=N||ny>=N||!groundMask[ny*N+nx]) continue; const v=copy[ny][nx]; t[v]=(t[v]||0)+1; }
+        let best=copy[y][x],bc=0; for(const kk in t){ if(t[kk]>bc){bc=t[kk];best=+kk;} }
+        grid[y][x]=best;
+      }
+    }
+    bgColors=new Set(); for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(groundMask[y*N+x]) bgColors.add(grid[y][x]); }
     bgColors.forEach(i=>{ if(!chipOrder.includes(i)) chipOrder.push(i); });
     if($('#patType')) $('#patType').value='image';
     afterEdit();
@@ -334,7 +349,7 @@
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
-      const role=document.createElement('span'); role.className='role'; role.textContent= i===patternB?'alt background' : (bgColors.has(i)?'background':'symbol');
+      const role=document.createElement('span'); role.className='role'; role.textContent= bgColors.has(i) ? '' : 'symbol';
       chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
       chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
