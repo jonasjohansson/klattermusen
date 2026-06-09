@@ -81,7 +81,8 @@
 
   .studio-wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); overflow: hidden; }
   .studio-wrap img.bg { width: 100%; height: 100%; display: block; }
-  #studioWarp { position: absolute; inset: 0; pointer-events: none; }
+  .studio-wrap img.fg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }  /* table in front of the rug */
+  #studioWarp { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
   #studioWarp canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
   .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: var(--shadow-ctrl); cursor: grab; touch-action: none; z-index: 5; opacity: 0; transition: opacity .12s; }
   .studio-wrap:hover .handle, .studio-wrap.dragging .handle { opacity: 1; }

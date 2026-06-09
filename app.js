@@ -139,8 +139,8 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              // upright square on the big white studio wall (fine-tune with X/Y/Scale)
-              corners:[ {x:0.335,y:0.155}, {x:0.745,y:0.155}, {x:0.745,y:0.565}, {x:0.335,y:0.565} ] },
+              // upright square on the white wall, behind the table (X50 / Y43); square in the 1586×992 frame
+              corners:[ {x:0.340,y:0.174}, {x:0.660,y:0.174}, {x:0.660,y:0.686}, {x:0.340,y:0.686} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
     custom: { src:'',           blend:'normal',
@@ -186,7 +186,7 @@
 
   // ---------- fit the two media boxes into their views ----------
   function fitMedia(){
-    const rv=$('#paneRoom'), wrap=$('#studioWrap'), ar=2000/1600;
+    const rv=$('#paneRoom'), wrap=$('#studioWrap'), ar=1586/992;   // matches the studio backdrop
     let vw=rv.clientWidth, vh=rv.clientHeight;                 // room = COVER: fill the pane, crop overflow
     if (vw>0 && vh>0){ let w=Math.max(vw, vh*ar); wrap.style.width=w+'px'; wrap.style.height=(w/ar)+'px'; }
     const cv=$('#paneCompare'), cmp=$('#compare');             // compare = CONTAIN square, edge to edge
@@ -548,6 +548,8 @@
     ctx.save(); ctx.shadowColor='rgba(0,0,0,.30)'; ctx.shadowBlur=20*scale; ctx.shadowOffsetY=10*scale;
     ctx.fillStyle='#000'; ctx.beginPath(); ctx.moveTo(quad.tl.x,quad.tl.y); ctx.lineTo(quad.tr.x,quad.tr.y); ctx.lineTo(quad.br.x,quad.br.y); ctx.lineTo(quad.bl.x,quad.bl.y); ctx.closePath(); ctx.fill(); ctx.restore();
     drawWarpedRug(ctx, tuftCache, quad, 16, 1.0*scale);
+    const fg=$('#studioFg');                                    // table cut-out in front of the rug
+    if(fg && fg.naturalWidth){ const rf=coverRect(fg.naturalWidth,fg.naturalHeight,ow,oh); ctx.drawImage(fg, rf.x,rf.y,rf.w,rf.h); }
     ctx.restore();
     // colour legend baked into the file
     if(cols.length){
