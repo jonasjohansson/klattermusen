@@ -245,7 +245,7 @@
   function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
   function applyPattern(){
     if(!groundMask) return;
-    const type=$('#patType').value, count=Math.max(1,parseInt($('#patSize').value)||8), b=Math.max(1,Math.round(N/count));   // Squares = checker squares per side
+    const type=$('#patType').value, count=Math.max(2,Math.min(6,parseInt($('#patSize').value)||6)), b=Math.max(1,Math.round(N/count));   // Squares = checker squares per side (2–6)
     if(type==='checker' && patternB==null) patternB=defaultPatternB();
     if(patternB!=null && !chipOrder.includes(patternB)) chipOrder.push(patternB);   // alt background = last slot
     pushHistory();
