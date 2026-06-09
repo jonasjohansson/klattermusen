@@ -272,9 +272,14 @@
     const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, sc=Math.max(N/iw,N/ih), dw=iw*sc, dh=ih*sc;
     o.imageSmoothingEnabled=true; o.drawImage(img,(N-dw)/2,(N-dh)/2,dw,dh);
     const data=o.getImageData(0,0,N,N).data, rgbs=palRgb();
+    // exclude the symbol's colours (those used outside the mask) so the background never collides with the logo
+    const symbolSet=new Set();
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(!groundMask[y*N+x]){ const v=grid[y][x]; if(v>=0) symbolSet.add(v); } }
+    let allowed=palette.map((c,i)=>i).filter(i=>!symbolSet.has(i)); if(!allowed.length) allowed=palette.map((c,i)=>i);
+    const nearAllow=(r,g,b)=>{ let best=allowed[0],bd=Infinity; for(const i of allowed){ const [pr,pg,pb]=rgbs[i]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=i;} } return best; };
     pushHistory();
     const counts={}, tmpIdx=new Int16Array(N*N);
-    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const m=y*N+x; if(!groundMask[m]){ tmpIdx[m]=-1; continue; } const p=m*4; const idx=nearestIdx(data[p],data[p+1],data[p+2],rgbs); tmpIdx[m]=idx; counts[idx]=(counts[idx]||0)+1; }
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const m=y*N+x; if(!groundMask[m]){ tmpIdx[m]=-1; continue; } const p=m*4; const idx=nearAllow(data[p],data[p+1],data[p+2]); tmpIdx[m]=idx; counts[idx]=(counts[idx]||0)+1; }
     const kept=Object.keys(counts).map(Number).sort((a,b)=>counts[b]-counts[a]).slice(0,k), keptRgb=kept.map(i=>rgbs[i]), remap={};
     for(const i of Object.keys(counts).map(Number)){ if(kept.includes(i)){remap[i]=i;continue;} const [r,g,b]=rgbs[i]; let best=kept[0],bd=Infinity; kept.forEach((ki,ji)=>{const[pr,pg,pb]=keptRgb[ji];const d=(pr-r)**2+(pg-g)**2+(pb-b)**2;if(d<bd){bd=d;best=ki;}}); remap[i]=best; }
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const t=tmpIdx[y*N+x]; if(t<0)continue; grid[y][x]=remap[t]; }
