@@ -261,7 +261,8 @@
     bgColors = type==='checker' ? new Set([groundIdx, patternB]) : new Set([groundIdx]);
     afterEdit();
   }
-  $('#patType').onchange=applyPattern; $('#patSize').onchange=applyPattern;
+  $('#patType').onchange=()=>{ if($('#patType').value==='image') $('#bgPatInput').click(); else applyPattern(); };
+  $('#patSize').onchange=applyPattern;
 
   // multi-colour background from an image — quantised to the palette, only over the background mask
   function applyBgImage(img){
