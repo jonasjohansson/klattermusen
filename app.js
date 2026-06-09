@@ -525,7 +525,7 @@
       drawTri(ctx,img, S10,S11,S01, P10,P11,P01, grow);
     }
   }
-  function snapshot(){
+  function roomSnapshot(){
     const wrap=$('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
     if(!W||!H){ alert('Open the room view first, then take a snapshot.'); return; }
     const scale=2, ow=Math.round(W*scale), oh=Math.round(H*scale);
@@ -569,7 +569,7 @@
     }
     downloadCanvas(cv, 'klattermusens-verkstad-room.png');
   }
-  $('#snapBtn').onclick = snapshot;
+  $('#snapBtn').onclick = roomSnapshot;
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
   $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
