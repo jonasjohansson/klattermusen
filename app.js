@@ -138,8 +138,8 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              // upright square centred at X31% / Y41%, scale 149% (Jonas's preferred default)
-              corners:[ {x:0.157,y:0.219}, {x:0.464,y:0.219}, {x:0.464,y:0.601}, {x:0.157,y:0.601} ] },
+              // upright square centred at X40% / Y52%, scale 117% (Jonas's preferred default)
+              corners:[ {x:0.220,y:0.297}, {x:0.580,y:0.297}, {x:0.580,y:0.743}, {x:0.220,y:0.743} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
     custom: { src:'',           blend:'normal',
@@ -243,6 +243,28 @@
     recolorTarget=to; afterEdit();
   }
 
+  // randomise every colour in use to a fresh (in-stock) yarn; the symbol gets a contrasting colour so it stands out
+  const lumOf=idx=>{ const [r,g,b]=hexToRgb(palette[idx].hex); return 0.299*r+0.587*g+0.114*b; };
+  function randomizeColors(){
+    const counts=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=grid[y][x]; if(v>=0)counts[v]++;}
+    const used=palette.map((c,i)=>i).filter(i=>counts[i]>0); if(!used.length) return;
+    const bg=used.filter(i=>bgColors.has(i)), sym=used.filter(i=>!bgColors.has(i));
+    let pool=palette.map((c,i)=>i).filter(i=>inStock(palette[i])); if(pool.length<used.length) pool=palette.map((c,i)=>i);
+    const sh=[...pool]; for(let i=sh.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [sh[i],sh[j]]=[sh[j],sh[i]]; }
+    pushHistory();
+    const map={}, taken=new Set();
+    let pi=0; bg.forEach(i=>{ while(taken.has(sh[pi%sh.length])) pi++; map[i]=sh[pi%sh.length]; taken.add(map[i]); pi++; });   // background: random distinct
+    const bgVals=bg.map(i=>lumOf(map[i])), meanBg=bgVals.length? bgVals.reduce((a,b)=>a+b,0)/bgVals.length : 128;
+    // symbol: pick among the most contrasting in-stock yarns (with a little randomness)
+    const cand=pool.filter(i=>!taken.has(i)).sort((a,b)=>Math.abs(lumOf(b)-meanBg)-Math.abs(lumOf(a)-meanBg));
+    sym.forEach(i=>{ const top=cand.filter(c=>!taken.has(c)).slice(0,5); const pick=top.length?top[Math.floor(Math.random()*top.length)]:(cand[0]??sh[0]); map[i]=pick; taken.add(pick); });
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0 && map[v]!=null) grid[y][x]=map[v]; }
+    const mv=i=> (i!=null && map[i]!=null)?map[i]:i;
+    groundIdx=mv(groundIdx); patternB=mv(patternB); recolorTarget=mv(recolorTarget);
+    bgColors=new Set([...bgColors].map(mv)); chipOrder=chipOrder.map(mv);
+    afterEdit();
+  }
+
   // ---------- background pattern (mask-based: only the background cells, never the symbol) ----------
   function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
   function applyPattern(){
@@ -306,6 +328,7 @@
     if(recolorTarget==null || recolorTarget>=palette.length) recolorTarget=used[0];
     const ordered=chipOrder.filter(i=>counts[i]>0); used.forEach(i=>{ if(!ordered.includes(i)) ordered.push(i); });   // stable slots; new colours appended
 
+    const rnd=document.createElement('button'); rnd.className='rc-tool'; rnd.textContent='🎲'; rnd.title='Randomise the colours'; rnd.onclick=randomizeColors; rc.appendChild(rnd);
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
     ordered.forEach(i=>{
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
@@ -410,11 +433,6 @@
     studioCanvas.addEventListener('pointerdown', e=>{ e.preventDefault(); md={x:e.clientX,y:e.clientY}; rect=$('#studioWrap').getBoundingClientRect(); showXform(); try{studioCanvas.setPointerCapture(e.pointerId);}catch(_){ } });
     document.addEventListener('pointermove', e=>{ if(!md) return; const dx=(e.clientX-md.x)/rect.width, dy=(e.clientY-md.y)/rect.height; corners.forEach(p=>{p.x+=dx;p.y+=dy;}); md={x:e.clientX,y:e.clientY}; placeStudio(); });
     document.addEventListener('pointerup', ()=>{ if(md){ md=null; endDrag(); } });
-  })();
-  (function bindHandles(){ let drag=null, rect=null;
-    document.querySelectorAll('.handle').forEach(h=>{ h.addEventListener('pointerdown', e=>{ e.preventDefault(); drag=+h.dataset.corner; rect=$('#studioWrap').getBoundingClientRect(); showXform(); try{h.setPointerCapture(e.pointerId);}catch(_){ } }); });
-    document.addEventListener('pointermove', e=>{ if(drag===null) return; corners[drag]={ x:Math.max(0,Math.min(1,(e.clientX-rect.left)/rect.width)), y:Math.max(0,Math.min(1,(e.clientY-rect.top)/rect.height)) }; placeStudio(); });
-    document.addEventListener('pointerup', ()=>{ if(drag!==null){ drag=null; endDrag(); } });
   })();
   // dismiss the transform popover when clicking away from the rug / popover
   document.addEventListener('pointerdown', e=>{
