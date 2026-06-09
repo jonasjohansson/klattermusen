@@ -130,9 +130,9 @@
       if (y<N-1 && grid[y+1][x]!==v){ ctx.strokeStyle='rgba(0,0,0,.12)'; ctx.beginPath(); ctx.moveTo(x*s,(y+1)*s); ctx.lineTo((x+1)*s,(y+1)*s); ctx.stroke(); }
     }
     const rg=ctx.createRadialGradient(w/2,w/2,w*0.2,w/2,w/2,w*0.72);
-    rg.addColorStop(0,'rgba(255,255,255,0)'); rg.addColorStop(1,'rgba(0,0,0,.08)');
+    rg.addColorStop(0,'rgba(255,255,255,0)'); rg.addColorStop(1,'rgba(0,0,0,.03)');
     ctx.fillStyle=rg; ctx.fillRect(0,0,w,w);
-    ctx.strokeStyle='rgba(0,0,0,.25)'; ctx.lineWidth=Math.max(2,s*0.25);
+    ctx.strokeStyle='rgba(0,0,0,.07)'; ctx.lineWidth=Math.max(1,s*0.08);
     ctx.strokeRect(ctx.lineWidth/2, ctx.lineWidth/2, w-ctx.lineWidth, w-ctx.lineWidth);
   }
 
