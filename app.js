@@ -63,7 +63,7 @@
   };
   let supplier = 'hitex';
   const inStock = c => SUPPLIERS[supplier].stock(c);
-  let recolorTarget = null;
+  let recolorTarget = null, recolorSymbol = false;
   let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
   let bgColors = new Set();   // palette indices that make up the background (1 = plain, 2 = checker, many = image)
   let chipOrder = [];   // stable slot order for the in-rug chips (so recolouring doesn't reshuffle them)
@@ -231,16 +231,21 @@
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
-  function remapColour(from, to){
+  function remapColour(from, to, symbolRegion){
     if(from===to) return;
     pushHistory();
-    for(let y=0;y<N;y++)for(let x=0;x<N;x++) if(grid[y][x]===from) grid[y][x]=to;
+    const region = groundMask!=null;   // only touch cells in the clicked chip's region (symbol cells never affect the background)
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+      if(grid[y][x]!==from) continue;
+      if(region){ const inBg=!!groundMask[y*N+x]; if(symbolRegion ? inBg : !inBg) continue; }
+      grid[y][x]=to;
+    }
     // keep pattern state in sync so re-patterning doesn't stack old colours
-    if(groundIdx===from) groundIdx=to;
-    if(patternB===from) patternB=to;
-    if(bgColors.has(from)){ bgColors.delete(from); bgColors.add(to); }
+    if(region){ bgColors=new Set(); for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(groundMask[y*N+x]) bgColors.add(grid[y][x]); } }
+    else if(bgColors.has(from)){ bgColors.delete(from); bgColors.add(to); }
+    if(!symbolRegion){ if(groundIdx===from) groundIdx=to; if(patternB===from) patternB=to; }
     const oi=chipOrder.indexOf(from); if(oi>=0){ chipOrder[oi]=to; chipOrder=chipOrder.filter((v,idx)=> idx===oi || v!==to); }  // keep the same slot
-    recolorTarget=to; afterEdit();
+    recolorTarget=to; recolorSymbol=!!symbolRegion; afterEdit();
   }
 
   // randomise every colour in use to a fresh (in-stock) yarn; the symbol gets a contrasting colour so it stands out
@@ -261,7 +266,7 @@
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0 && map[v]!=null) grid[y][x]=map[v]; }
     const mv=i=> (i!=null && map[i]!=null)?map[i]:i;
     groundIdx=mv(groundIdx); patternB=mv(patternB); recolorTarget=mv(recolorTarget);
-    bgColors=new Set([...bgColors].map(mv)); chipOrder=chipOrder.map(mv);
+    bgColors=new Set([...bgColors].map(mv)); chipOrder=[...new Set(chipOrder.map(mv))];   // de-dupe so a colour never shows twice
     afterEdit();
   }
 
@@ -340,8 +345,8 @@
     const used=palette.map((c,i)=>i).filter(i=>counts[i]>0);
     const rc=$('#rugColors'), tray=$('#paletteTray'); rc.innerHTML=''; tray.innerHTML='';
     if(!used.length){ rc.innerHTML='<span class="lbl">Upload artwork to begin</span>'; return; }
-    if(recolorTarget==null || recolorTarget>=palette.length) recolorTarget=used[0];
-    const ordered=chipOrder.filter(i=>counts[i]>0); used.forEach(i=>{ if(!ordered.includes(i)) ordered.push(i); });   // stable slots; new colours appended
+    if(recolorTarget==null || recolorTarget>=palette.length){ recolorTarget=used[0]; recolorSymbol=!bgColors.has(recolorTarget); }
+    const ordered=[]; chipOrder.forEach(i=>{ if(counts[i]>0 && !ordered.includes(i)) ordered.push(i); }); used.forEach(i=>{ if(!ordered.includes(i)) ordered.push(i); });   // stable slots, de-duped; new colours appended
 
     const rnd=document.createElement('button'); rnd.className='rc-tool'; rnd.textContent='🎲'; rnd.title='Randomise the colours'; rnd.onclick=randomizeColors; rc.appendChild(rnd);
     const l=document.createElement('span'); l.className='lbl'; l.textContent='In rug'; rc.appendChild(l);
@@ -351,13 +356,13 @@
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
       const role=document.createElement('span'); role.className='role'; role.textContent= bgColors.has(i) ? '' : 'symbol';
       chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
-      chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
+      chip.onclick=()=>{ recolorTarget=i; recolorSymbol=!bgColors.has(i); renderRecolour(); };
       rc.appendChild(chip);
     });
 
     palette.forEach((c,j)=>{
       const s=document.createElement('button'); s.className='tray-sw'+(inStock(c)?'':' oos'); s.style.background=c.hex; s.title=c.name+(inStock(c)?'':' — sold out');
-      s.onclick=()=> remapColour(recolorTarget, j);
+      s.onclick=()=> remapColour(recolorTarget, j, recolorSymbol);
       tray.appendChild(s);
     });
   }
