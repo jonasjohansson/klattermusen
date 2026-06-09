@@ -96,8 +96,12 @@
       <select id="patType">
         <option value="plain" selected>Plain</option>
         <option value="checker">Checker</option>
+        <option value="image">Image</option>
       </select>
       <span class="lbl">Squares</span><input type="number" id="patSize" value="6" min="2" max="6">
+      <button id="bgPatBtn" title="Use an image as a multi-colour background">📷 Image</button>
+      <span class="lbl">colours</span><input type="number" id="bgColorsN" value="4" min="2" max="8">
+      <input type="file" id="bgPatInput" accept="image/*" hidden>
     </div>
     <div class="dock-row tray" id="paletteTray"></div>
   </div>

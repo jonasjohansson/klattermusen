@@ -65,6 +65,7 @@
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let recolorTarget = null;
   let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
+  let bgColors = new Set();   // palette indices that make up the background (1 = plain, 2 = checker, many = image)
   let chipOrder = [];   // stable slot order for the in-rug chips (so recolouring doesn't reshuffle them)
 
   const undoStack = [], redoStack = [];
@@ -237,6 +238,7 @@
     // keep pattern state in sync so re-patterning doesn't stack old colours
     if(groundIdx===from) groundIdx=to;
     if(patternB===from) patternB=to;
+    if(bgColors.has(from)){ bgColors.delete(from); bgColors.add(to); }
     const oi=chipOrder.indexOf(from); if(oi>=0){ chipOrder[oi]=to; chipOrder=chipOrder.filter((v,idx)=> idx===oi || v!==to); }  // keep the same slot
     recolorTarget=to; afterEdit();
   }
@@ -245,7 +247,9 @@
   function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
   function applyPattern(){
     if(!groundMask) return;
-    const type=$('#patType').value, count=Math.max(2,Math.min(6,parseInt($('#patSize').value)||6)), b=Math.max(1,Math.round(N/count));   // Squares = checker squares per side (2–6)
+    const type=$('#patType').value;
+    if(type==='image') return;                                   // image backgrounds are applied via the button
+    const count=Math.max(2,Math.min(6,parseInt($('#patSize').value)||6)), b=Math.max(1,Math.round(N/count));   // Squares = checker squares per side (2–6)
     if(type==='checker' && patternB==null) patternB=defaultPatternB();
     if(patternB!=null && !chipOrder.includes(patternB)) chipOrder.push(patternB);   // alt background = last slot
     pushHistory();
@@ -254,9 +258,32 @@
       const g = type==='checker' ? (((Math.floor(x/b)+Math.floor(y/b))&1)===0) : true;
       grid[y][x]= g?groundIdx:patternB;
     }
+    bgColors = type==='checker' ? new Set([groundIdx, patternB]) : new Set([groundIdx]);
     afterEdit();
   }
   $('#patType').onchange=applyPattern; $('#patSize').onchange=applyPattern;
+
+  // multi-colour background from an image — quantised to the palette, only over the background mask
+  function applyBgImage(img){
+    if(!groundMask) return;
+    const k=Math.max(2,Math.min(8,parseInt($('#bgColorsN').value)||4));
+    const off=document.createElement('canvas'); off.width=off.height=N; const o=off.getContext('2d');
+    const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, sc=Math.max(N/iw,N/ih), dw=iw*sc, dh=ih*sc;
+    o.imageSmoothingEnabled=true; o.drawImage(img,(N-dw)/2,(N-dh)/2,dw,dh);
+    const data=o.getImageData(0,0,N,N).data, rgbs=palRgb();
+    pushHistory();
+    const counts={}, tmpIdx=new Int16Array(N*N);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const m=y*N+x; if(!groundMask[m]){ tmpIdx[m]=-1; continue; } const p=m*4; const idx=nearestIdx(data[p],data[p+1],data[p+2],rgbs); tmpIdx[m]=idx; counts[idx]=(counts[idx]||0)+1; }
+    const kept=Object.keys(counts).map(Number).sort((a,b)=>counts[b]-counts[a]).slice(0,k), keptRgb=kept.map(i=>rgbs[i]), remap={};
+    for(const i of Object.keys(counts).map(Number)){ if(kept.includes(i)){remap[i]=i;continue;} const [r,g,b]=rgbs[i]; let best=kept[0],bd=Infinity; kept.forEach((ki,ji)=>{const[pr,pg,pb]=keptRgb[ji];const d=(pr-r)**2+(pg-g)**2+(pb-b)**2;if(d<bd){bd=d;best=ki;}}); remap[i]=best; }
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const t=tmpIdx[y*N+x]; if(t<0)continue; grid[y][x]=remap[t]; }
+    bgColors=new Set(kept.map(i=>remap[i]));
+    bgColors.forEach(i=>{ if(!chipOrder.includes(i)) chipOrder.push(i); });
+    if($('#patType')) $('#patType').value='image';
+    afterEdit();
+  }
+  $('#bgPatBtn').onclick = ()=> $('#bgPatInput').click();
+  $('#bgPatInput').onchange = e=>{ const f=e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>applyBgImage(img); img.onerror=()=>alert('Could not load image.'); img.src=URL.createObjectURL(f); e.target.value=''; };
   function renderRecolour(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
@@ -271,7 +298,7 @@
       const chip=document.createElement('div'); chip.className='rc-chip'+(i===recolorTarget?' active':'');
       const sw=document.createElement('span'); sw.className='sw'+(inStock(palette[i])?'':' oos'); sw.style.background=palette[i].hex;
       const nm=document.createElement('span'); nm.className='nm'; nm.textContent=palette[i].name+(inStock(palette[i])?'':' (sold out)');
-      const role=document.createElement('span'); role.className='role'; role.textContent= i===groundIdx?'background' : (i===patternB?'alt background':'symbol');
+      const role=document.createElement('span'); role.className='role'; role.textContent= i===patternB?'alt background' : (bgColors.has(i)?'background':'symbol');
       chip.appendChild(sw); chip.appendChild(nm); chip.appendChild(role);
       chip.onclick=()=>{ recolorTarget=i; renderRecolour(); };
       rc.appendChild(chip);
@@ -332,7 +359,7 @@
     // dominant colour = the rug's background; capture a fixed mask so patterns never touch the symbol
     { const cc=new Array(palette.length).fill(0); for(let y=0;y<N;y++)for(let x=0;x<N;x++){const v=tmp[y][x]; if(v>=0)cc[v]++;} groundIdx=cc.indexOf(Math.max(...cc));
       groundMask=new Uint8Array(N*N); for(let y=0;y<N;y++)for(let x=0;x<N;x++) groundMask[y*N+x]= tmp[y][x]===groundIdx?1:0;
-      patternB=null;
+      patternB=null; bgColors=new Set([groundIdx]);
       const usedNow=cc.map((n,i)=>i).filter(i=>cc[i]>0);
       chipOrder=[ ...usedNow.filter(i=>i!==groundIdx), groundIdx ];   // symbols first, background last
       if($('#patType')) $('#patType').value='plain'; }
@@ -420,7 +447,7 @@
   const LS_KEY='klattermusen.v1';
   let saveTimer=null;
   function saveState(){
-    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, chipOrder, corners, recolorTarget, supplier, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
+    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, bgColors:[...bgColors], chipOrder, corners, recolorTarget, supplier, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
   }
   function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 400); }
   function loadState(){
@@ -429,11 +456,12 @@
       const d=JSON.parse(raw); if(!d.grid) return false;
       N=d.N; grid=d.grid; if(d.palette) palette=d.palette;
       groundIdx=d.groundIdx; patternB=d.patternB; chipOrder=d.chipOrder||[]; recolorTarget=d.recolorTarget;
+      bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));
       if(d.corners) corners=d.corners;
       if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
-      if(d.patType) $('#patType').value=d.patType; if(d.patSize) $('#patSize').value=d.patSize;
-      groundMask=new Uint8Array(N*N);                          // background region = ground + alt-bg cells
-      for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; groundMask[y*N+x]=(v===groundIdx||v===patternB)?1:0; }
+      if(d.patType){ $('#patType').value=d.patType; } if(d.patSize) $('#patSize').value=d.patSize;
+      groundMask=new Uint8Array(N*N);                          // background region = cells holding a background colour
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){ groundMask[y*N+x]= bgColors.has(grid[y][x])?1:0; }
       updateLabels(); afterEdit(); fitMedia();
       return true;
     }catch(_){ return false; }
