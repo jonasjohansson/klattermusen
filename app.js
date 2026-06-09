@@ -481,6 +481,95 @@
 
   // ---------- export / save ----------
   function downloadCanvas(c,name){ c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
+
+  // ---------- room snapshot: room photo + perspective-warped rug + colour legend ----------
+  const SNAP_FONT='ui-monospace, SFMono-Regular, Menlo, monospace';
+  function usedColorList(){
+    const counts=new Array(palette.length).fill(0);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    const order=[]; chipOrder.forEach(i=>{ if(counts[i]>0 && !order.includes(i)) order.push(i); });
+    palette.forEach((c,i)=>{ if(counts[i]>0 && !order.includes(i)) order.push(i); });
+    return order;
+  }
+  function coverRect(iw,ih,bw,bh){ const s=Math.max(bw/iw,bh/ih); const w=iw*s,h=ih*s; return {x:(bw-w)/2,y:(bh-h)/2,w,h}; }
+  // draw one source triangle into a destination triangle (affine), clip slightly dilated to hide seams
+  function drawTri(ctx,img, s0,s1,s2, d0,d1,d2, grow){
+    const cx=(d0.x+d1.x+d2.x)/3, cy=(d0.y+d1.y+d2.y)/3;
+    const ex=p=>{ const dx=p.x-cx,dy=p.y-cy,L=Math.hypot(dx,dy)||1; return {x:p.x+dx/L*grow, y:p.y+dy/L*grow}; };
+    const c0=ex(d0),c1=ex(d1),c2=ex(d2);
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(c0.x,c0.y); ctx.lineTo(c1.x,c1.y); ctx.lineTo(c2.x,c2.y); ctx.closePath(); ctx.clip();
+    const x0=s0.x,y0=s0.y,x1=s1.x,y1=s1.y,x2=s2.x,y2=s2.y;
+    const den=x0*(y2-y1)-x1*y2+x2*y1+(x1-x2)*y0; if(!den){ ctx.restore(); return; }
+    const a=-(y0*(d2.x-d1.x)-y1*d2.x+y2*d1.x+(y1-y2)*d0.x)/den;
+    const b=(y1*d2.y+y0*(d1.y-d2.y)-y2*d1.y+(y2-y1)*d0.y)/den;
+    const c=(x0*(d2.x-d1.x)-x1*d2.x+x2*d1.x+(x1-x2)*d0.x)/den;
+    const d=-(x1*d2.y+x0*(d1.y-d2.y)-x2*d1.y+(x2-x1)*d0.y)/den;
+    const e=(x0*(y2*d1.x-y1*d2.x)+y0*(x1*d2.x-x2*d1.x)+(x2*y1-x1*y2)*d0.x)/den;
+    const f=(x0*(y2*d1.y-y1*d2.y)+y0*(x1*d2.y-x2*d1.y)+(x2*y1-x1*y2)*d0.y)/den;
+    ctx.transform(a,b,c,d,e,f);
+    ctx.drawImage(img,0,0);
+    ctx.restore();
+  }
+  function drawWarpedRug(ctx,img,quad,G,grow){
+    const s=[0,0, 1,0, 0,1, 1,1];
+    const d=[quad.tl.x,quad.tl.y, quad.tr.x,quad.tr.y, quad.bl.x,quad.bl.y, quad.br.x,quad.br.y];
+    const t=general2DProjection(s,d); for(let i=0;i<9;i++) t[i]/=t[8];
+    const proj=(u,v)=>{ const X=t[0]*u+t[1]*v+t[2],Y=t[3]*u+t[4]*v+t[5],Wp=t[6]*u+t[7]*v+t[8]; return {x:X/Wp,y:Y/Wp}; };
+    const iw=img.width, ih=img.height;
+    for(let i=0;i<G;i++)for(let j=0;j<G;j++){
+      const u0=i/G,u1=(i+1)/G,v0=j/G,v1=(j+1)/G;
+      const P00=proj(u0,v0),P10=proj(u1,v0),P01=proj(u0,v1),P11=proj(u1,v1);
+      const S00={x:u0*iw,y:v0*ih},S10={x:u1*iw,y:v0*ih},S01={x:u0*iw,y:v1*ih},S11={x:u1*iw,y:v1*ih};
+      drawTri(ctx,img, S00,S10,S01, P00,P10,P01, grow);
+      drawTri(ctx,img, S10,S11,S01, P10,P11,P01, grow);
+    }
+  }
+  function snapshot(){
+    const wrap=$('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
+    if(!W||!H){ alert('Open the room view first, then take a snapshot.'); return; }
+    const scale=2, ow=Math.round(W*scale), oh=Math.round(H*scale);
+    const cols=usedColorList();
+    const pad=24*scale, sw=26*scale, lh=Math.max(sw+10*scale, 34*scale);
+    const colW=Math.min(260*scale, ow-2*pad);
+    const perRow=Math.max(1, Math.floor((ow-2*pad)/colW));
+    const rowsN=cols.length?Math.ceil(cols.length/perRow):0, titleH=44*scale;
+    const legendH = cols.length ? (pad + titleH + rowsN*lh + pad) : 0;
+    const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh+legendH;
+    const ctx=cv.getContext('2d');
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height);
+    // room background (object-fit: cover), clipped to the room area
+    const bg=$('#studioBg'); const iw=bg.naturalWidth||bg.width, ih=bg.naturalHeight||bg.height;
+    ctx.save(); ctx.beginPath(); ctx.rect(0,0,ow,oh); ctx.clip();
+    if(iw&&ih){ const r=coverRect(iw,ih,ow,oh); ctx.drawImage(bg, r.x,r.y,r.w,r.h); }
+    // rug quad in output pixels (corners are fractions of the wrap box)
+    const quad={ tl:{x:corners[0].x*ow,y:corners[0].y*oh}, tr:{x:corners[1].x*ow,y:corners[1].y*oh},
+                 br:{x:corners[2].x*ow,y:corners[2].y*oh}, bl:{x:corners[3].x*ow,y:corners[3].y*oh} };
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.30)'; ctx.shadowBlur=20*scale; ctx.shadowOffsetY=10*scale;
+    ctx.fillStyle='#000'; ctx.beginPath(); ctx.moveTo(quad.tl.x,quad.tl.y); ctx.lineTo(quad.tr.x,quad.tr.y); ctx.lineTo(quad.br.x,quad.br.y); ctx.lineTo(quad.bl.x,quad.bl.y); ctx.closePath(); ctx.fill(); ctx.restore();
+    drawWarpedRug(ctx, tuftCache, quad, 16, 1.0*scale);
+    ctx.restore();
+    // colour legend baked into the file
+    if(cols.length){
+      let ly=oh+pad;
+      ctx.fillStyle='#111'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+      ctx.font=`${22*scale}px ${SNAP_FONT}`;
+      ctx.fillText(`Klättermusens Verkstad · ${RUG_M.toFixed(1)}×${RUG_M.toFixed(1)} m · ${pileMM} mm cut pile`, pad, ly+24*scale);
+      ly+=titleH;
+      ctx.font=`${15*scale}px ${SNAP_FONT}`;
+      cols.forEach((idx,k)=>{
+        const col=k%perRow, row=Math.floor(k/perRow);
+        const x=pad+col*colW, y=ly+row*lh;
+        ctx.fillStyle=palette[idx].hex; ctx.fillRect(x,y,sw,sw);
+        ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.strokeRect(x+0.5,y+0.5,sw-1,sw-1);
+        ctx.fillStyle='#111'; ctx.textBaseline='middle';
+        ctx.fillText(palette[idx].name+(bgColors.has(idx)?'':'  (symbol)'), x+sw+10*scale, y+sw/2);
+        ctx.textBaseline='alphabetic';
+      });
+    }
+    downloadCanvas(cv, 'klattermusens-verkstad-room.png');
+  }
+  $('#snapBtn').onclick = snapshot;
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
   $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
