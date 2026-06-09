@@ -545,7 +545,7 @@
     // rug quad in output pixels (corners are fractions of the wrap box)
     const quad={ tl:{x:corners[0].x*ow,y:corners[0].y*oh}, tr:{x:corners[1].x*ow,y:corners[1].y*oh},
                  br:{x:corners[2].x*ow,y:corners[2].y*oh}, bl:{x:corners[3].x*ow,y:corners[3].y*oh} };
-    ctx.save(); ctx.shadowColor='rgba(0,0,0,.20)'; ctx.shadowBlur=14*scale; ctx.shadowOffsetY=7*scale;
+    ctx.save(); ctx.shadowColor='rgba(0,0,0,.12)'; ctx.shadowBlur=9*scale; ctx.shadowOffsetY=4*scale;
     ctx.fillStyle='#000'; ctx.beginPath(); ctx.moveTo(quad.tl.x,quad.tl.y); ctx.lineTo(quad.tr.x,quad.tr.y); ctx.lineTo(quad.br.x,quad.br.y); ctx.lineTo(quad.bl.x,quad.bl.y); ctx.closePath(); ctx.fill(); ctx.restore();
     drawWarpedRug(ctx, tuftCache, quad, 16, 1.0*scale);
     const fg=$('#studioFg');                                    // table cut-out in front of the rug
