@@ -139,8 +139,8 @@
   // ---------- scenes + perspective warp ----------
   const BG = {
     room:   { src:'room.jpg',   blend:'normal',
-              // upright square centred at X37% / Y48%, scale 113% (Jonas's preferred default)
-              corners:[ {x:0.167,y:0.228}, {x:0.573,y:0.228}, {x:0.573,y:0.732}, {x:0.167,y:0.732} ] },
+              // upright square on the big white studio wall (fine-tune with X/Y/Scale)
+              corners:[ {x:0.335,y:0.155}, {x:0.745,y:0.155}, {x:0.745,y:0.565}, {x:0.335,y:0.565} ] },
     studio: { src:'studio.jpg', blend:'multiply',
               corners:[ {x:0.300,y:0.300}, {x:0.700,y:0.300}, {x:0.700,y:0.700}, {x:0.300,y:0.700} ] },
     custom: { src:'',           blend:'normal',
