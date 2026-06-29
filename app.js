@@ -61,6 +61,45 @@
     tuftingshop: { label:'Tufting Shop',   cur:'kr', unit:'cone', coneG:500, price:202, link:()=> 'https://tuftingshop.com/sv/collections/yarn',                       stock:()=> true, mat:{cloth:509, glue:226, backing:203}, ship:0 },
     hitex:       { label:'Hitex',          cur:'kr', unit:'kg',              price:594, link:()=> 'https://hitex.se/products/tufting-yarn/',                            stock:()=> true, mat:{cloth:450, glue:220, backing:190}, ship:1000 },
   };
+  // Hitex tufting-yarn swatches (item 932007-<code>), avg colour sampled from the
+  // catalogue cut-edge thumbnails; NCS where published. Matched to the palette on the
+  // fly so uploaded-image colours get a code too. Hitex bills per kg with a volume
+  // discount: 5–9 kg −10%, 10–14 kg −12%, 15 kg+ −15% (1 kg min/colour).
+  const HITEX_YARN = [
+    ['A1','#161716','7030-G10Y'], ['A2','#24220f','5050-G60Y'], ['A3','#31281d','7020-G90Y'], ['A4','#3b3628','6010-Y'], ['A5','#4e432c','5020-Y'], ['A6','#736955','3010-Y'],
+    ['A7','#8b701e','3040-Y'], ['A8','#a9976f','1010-Y10R'], ['A9','#ac9367','1010-G90Y'], ['B1','#0b161c','6030-B30G'], ['B2','#1a232c','6020-B30G'], ['B3','#2d3d2a','5530-G30Y'],
+    ['B4','#314a26','4055-G40Y'], ['B5','#5e662e','3040-G60Y'], ['B6','#35635f','3030-B90G'], ['B7','#768685','2005-B90G'], ['B8','#8eaca5','0015-B90G'], ['B9','#b6b8bc','1005-B50G'],
+    ['C1','#0d0d16','7025-R80B'], ['C2','#0c101a','7020-B10G'], ['C3','#1e2637','7015-R90B'], ['C4','#04284c','3070-B10G'], ['C5','#046370','1080-B40G'], ['C6','#496c7f','2010-B50G'],
+    ['C7','#77848d','2005-B20G'], ['C8','#858585','2502-G'], ['C9','#b6ab9c','0702-Y'], ['D1','#0c0d14','6530-R80B'], ['D2','#0d1230','5030-R90B'], ['D3','#051a48','4550-R90B'],
+    ['D4','#054574','3050-B'], ['D5','#053e85','1070-B'], ['D6','#1f455f','4525-B10G'], ['D7','#4d6c85','3020-B10G'], ['D8','#959ea6','2010-B'], ['D9','#c1af9f','0702-R'],
+    ['E1','#100e0f','8020-R30B'], ['E2','#0f0d10','8020-R50B'], ['E3','#1d1421','6020-R30B'], ['E4','#1e0b2d','1060-R60B'], ['E5','#2e2133','5020-R50B'], ['E6','#413f45','4502-B'],
+    ['E7','#7c7a7c','2502-B'], ['E8','#868588','1005-R80B'], ['E9','#bdaea4','0402-R'], ['F1','#170d0e','8010-R10B'], ['F2','#390d0f','4050-R'], ['F3','#280c11','5040-R10B'],
+    ['F4','#341922','4035-R30B'], ['F5','#5b2a3d','4030-R30B'], ['F6','#634e47','3015-R10B'], ['F7','#806247','4015-Y30R'], ['F8','#a18777','1510-Y90R'], ['F9','#e7d5b6','0005-Y70R'],
+    ['G1','#1a0c0c','5040-R'], ['G2','#480c10','3070-Y90R'], ['G3','#650412','1090-R'], ['G4','#510613','2090-R15B'], ['G5','#9a4047','1530-R'], ['G6','#845137','2020-Y60R'],
+    ['G7','#c19567','2025-Y30R'], ['G8','#c7ac84','0010-Y30R'], ['G9','#e3c69c','0010-Y20R'], ['H1','#130f0d','9015-Y80R'], ['H2','#3f140d','6040-Y50R'], ['H3','#662211','3040-Y70R'],
+    ['H4','#7b2f0e','2060-Y60R'], ['H5','#bf4f07','0095-Y30R'], ['H6','#7c5733','2020-Y30R'], ['H7','#a48a6f','2010-Y40R'], ['H8','#bca584','1005-G80Y'], ['H9','#e4d09f','0005-Y20R'],
+    ['I1','#2b160f','7030-Y40R'], ['I2','#412212','5050-Y20R'], ['I3','#602e14','4060-Y20R'], ['I4','#895713','2070-Y'], ['I5','#edc211','0070-Y'], ['I6','#b18134','1020-Y30R'],
+    ['I7','#e5b033'], ['I8','#e0d0a9'], ['I9','#e6dcbf']
+  ];
+  function rgb2lab([r,g,b]){
+    const f=v=>{ v/=255; v=v<=0.04045? v/12.92 : ((v+0.055)/1.055)**2.4; return v; };
+    r=f(r); g=f(g); b=f(b);
+    let x=(r*0.4124+g*0.3576+b*0.1805)/0.95047, y=r*0.2126+g*0.7152+b*0.0722, z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+    const t=v=> v>0.008856? Math.cbrt(v) : 7.787*v+16/116;
+    return [116*t(y)-16, 500*(t(x)-t(y)), 200*(t(y)-t(z))];
+  }
+  const HITEX_LAB = HITEX_YARN.map(y=>({ code:y[0], ncs:y[2]||null, lab:rgb2lab(hexToRgb(y[1])) }));
+  // nearest Hitex yarn to an arbitrary hex, in Lab — returns {code, ncs, dE}.
+  // dE is the ΔE distance; > HITEX_APPROX means Hitex has no close colour and the
+  // exact yarn is better sourced from Tufting Europe/Shop, where the palette comes from.
+  const HITEX_APPROX = 12;
+  function hitexMatch(hex){
+    const lab=rgb2lab(hexToRgb(hex)); let best=HITEX_LAB[0], bd=Infinity;
+    for(const y of HITEX_LAB){ const d=(lab[0]-y.lab[0])**2+(lab[1]-y.lab[1])**2+(lab[2]-y.lab[2])**2; if(d<bd){bd=d; best=y;} }
+    return { code:best.code, ncs:best.ncs, dE:Math.sqrt(bd) };
+  }
+  // Hitex volume discount as a fraction of the yarn subtotal, by total billed kg
+  function hitexDiscount(kg){ return kg>=15? 0.15 : kg>=10? 0.12 : kg>=5? 0.10 : 0; }
   let supplier = 'hitex';
   let pileMM = 14;   // cut-pile height in mm; drives the yarn face weight
   const inStock = c => SUPPLIERS[supplier].stock(c);
@@ -203,19 +242,42 @@
     const counts=new Array(palette.length).fill(0); let filled=0;
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
     const cellArea=(RUG_M/N)*(RUG_M/N);
-    let rows='', totalKg=0, totalCost=0, totalCones=0, anyOOS=false;
+    let rows='', totalKg=0, totalCost=0, totalCones=0, billedKg=0, anyOOS=false;
     palette.forEach((c,i)=>{
       if(!counts[i]) return;
       const kg=counts[i]*cellArea*DENSITY; totalKg+=kg;
       let detail, cost;
       if (sup.unit==='cone'){ const cones=Math.ceil(kg*1000/sup.coneG); totalCones+=cones; cost=cones*price; detail=`${cones} cone${cones>1?'s':''}`; }
-      else { const billKg=Math.max(1,kg); cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
+      else { const billKg=Math.max(1,kg); billedKg+=billKg; cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
       totalCost+=cost;
       const ok=sup.stock(c); if(!ok) anyOOS=true;
+      // Hitex: tag each colour with its nearest catalogue item number (932007-<code>).
+      // Far matches (no close Hitex colour) are flagged ≈ and linked to the exact yarn
+      // at Tufting Europe, the range the palette is drawn from.
+      const m = supplier==='hitex' ? hitexMatch(c.hex) : null;
+      const approx = m && m.dE > HITEX_APPROX;
+      let code = '';
+      if (m && !approx){
+        code = ` <span class="ycode"${m.ncs?` title="NCS ${m.ncs}"`:''}>932007-${m.code}</span>`;
+      } else if (m){
+        const teTitle = `No close Hitex colour — exact ${c.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
+        code = ` <span class="ycode approx" title="${teTitle}">≈ 932007-${m.code}</span>`+
+          ` <a class="ycode src" href="${SUPPLIERS.te.link(c)}" target="_blank" rel="noopener" title="${teTitle}">Tufting Europe&nbsp;↗</a>`;
+      }
       rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
-        `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${ok?'':' <span class="oos">sold out</span>'}</td>`+
+        `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${code}${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="qty">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
+    // Hitex volume discount on the yarn subtotal (shown as its own line)
+    let discount=0;
+    if (supplier==='hitex'){
+      const rate=hitexDiscount(billedKg);
+      if (rate>0){
+        discount=totalCost*rate;
+        rows+=`<tr class="mat"><td class="c"></td><td>Volume discount · ${billedKg.toFixed(1)} kg</td>`+
+          `<td class="qty">−${(rate*100).toFixed(0)}%</td><td class="n">−${sup.cur}${discount.toFixed(0)}</td></tr>`;
+      }
+    }
     // Tufting Europe sourced items (one cloth + one backing + the gun), converted EUR→SEK
     const EUR=11.4, teCloth='https://tuftingeurope.com/product/primary-tufting-cloth-300x300cm/', teBack='https://tuftingeurope.com/product/non-slippery-secondary-backing-cloth-200x200cm/', teGun='https://tuftingeurope.com/product/ak-v-tufting-machine/';
     const cloth=Math.round(45*EUR), backing=Math.round(18*EUR), gun=Math.round(181.82*EUR), glue=m.glue, build=500, ship=sup.ship||0;
@@ -226,7 +288,7 @@
         rows+=`<tr class="mat"><td class="c"></td><td>${label}</td><td class="qty"></td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
       });
     }
-    const grand=totalCost+matSum;
+    const grand=totalCost+matSum-discount;
     const total = filled
       ? `<strong>${totalKg.toFixed(1)} kg</strong>${totalCones?' · '+totalCones+' cones':''} · <strong>${sup.cur}${grand.toFixed(0)}</strong>${anyOOS?' · <span class="oos">some sold out</span>':''}`
       : 'Upload artwork to see the yarn estimate.';

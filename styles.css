@@ -154,6 +154,10 @@
   .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); width: 1%; }
   .est-table a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--border); }
   .est-table a:hover { border-color: var(--fg); }
+  .ycode { font-family: var(--mono); font-size: 10px; color: var(--muted); letter-spacing: .02em; margin-left: 6px; }
+  .ycode.approx { color: var(--accent); cursor: help; }
+  .ycode.src { color: var(--accent); border-bottom: 1px solid var(--border); margin-left: 4px; }
+  .ycode.src:hover { border-color: var(--accent); }
   .oos { color: var(--accent); font-size: 10px; font-family: var(--mono); text-transform: uppercase; letter-spacing: .04em; }
   .est-total { font-size: 12px; margin-top: 8px; color: var(--muted); }
   .est-total strong { color: var(--fg); }
