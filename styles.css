@@ -107,7 +107,7 @@
   .dock-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   #rugColors, #paletteTray { flex: 1 1 100%; }   /* each on its own line: dice+colours, then settings, then palette */
   /* BOM lives in the header menu — near-opaque so it stays readable over the rug */
-  #bomMenu .menu-pop { width: 380px; max-height: 78vh; overflow: auto; background: rgba(255,255,255,.97); gap: 8px; }
+  #bomMenu .menu-pop { width: 430px; max-height: 78vh; overflow: auto; background: rgba(255,255,255,.97); gap: 8px; }
   #bomMenu .menu-pop > select { width: 100%; }
   #bomMenu .menu-pop label.pile-row { flex-direction: row; align-items: center; gap: 6px; font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 2px 0; }
   .pile-row input { width: 52px; }
@@ -147,10 +147,10 @@
   /* BOM (bill of materials) in the dock */
   #bom { width: 100%; }
   .est-table { width: 100%; max-width: 600px; border-collapse: collapse; font-size: 12px; }
-  .est-table td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--hover); white-space: nowrap; }
+  .est-table td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--hover); white-space: nowrap; }
   .est-table td.c { width: 16px; padding-right: 0; }
   .est-table td .dot { width: 15px; height: 15px; border-radius: 3px; display: inline-block; box-shadow: var(--inset-hair); }
-  .est-table td.qty { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); padding-right: 14px; }
+  .est-table td.qty { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); padding-right: 10px; }
   .est-table td.n { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); width: 1%; }
   .est-table a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--border); }
   .est-table a:hover { border-color: var(--fg); }

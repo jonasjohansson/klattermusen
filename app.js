@@ -262,7 +262,7 @@
       } else if (m){
         const teTitle = `No close Hitex colour — exact ${c.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
         code = ` <span class="ycode approx" title="${teTitle}">≈ 932007-${m.code}</span>`+
-          ` <a class="ycode src" href="${SUPPLIERS.te.link(c)}" target="_blank" rel="noopener" title="${teTitle}">Tufting Europe&nbsp;↗</a>`;
+          ` <a class="ycode src" href="${SUPPLIERS.te.link(c)}" target="_blank" rel="noopener" title="${teTitle}">TE&nbsp;↗</a>`;
       }
       rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
         `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${code}${ok?'':' <span class="oos">sold out</span>'}</td>`+
