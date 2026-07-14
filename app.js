@@ -242,30 +242,36 @@
     const counts=new Array(palette.length).fill(0); let filled=0;
     for (let y=0;y<N;y++) for (let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0){counts[v]++; filled++;} }
     const cellArea=(RUG_M/N)*(RUG_M/N);
+    // merge same-yarn slots (identical hex) into one order line; prefer an in-stock representative
+    const groups=new Map();   // hex -> { rep:paletteEntry, cells:int }
+    palette.forEach((c,i)=>{ if(!counts[i]) return;
+      const g=groups.get(c.hex);
+      if(!g) groups.set(c.hex, {rep:c, cells:counts[i]});
+      else { g.cells+=counts[i]; if(!sup.stock(g.rep) && sup.stock(c)) g.rep=c; }
+    });
     let rows='', totalKg=0, totalCost=0, totalCones=0, billedKg=0, anyOOS=false;
-    palette.forEach((c,i)=>{
-      if(!counts[i]) return;
-      const kg=counts[i]*cellArea*DENSITY; totalKg+=kg;
+    groups.forEach(({rep,cells})=>{
+      const kg=cells*cellArea*DENSITY; totalKg+=kg;
       let detail, cost;
       if (sup.unit==='cone'){ const cones=Math.ceil(kg*1000/sup.coneG); totalCones+=cones; cost=cones*price; detail=`${cones} cone${cones>1?'s':''}`; }
       else { const billKg=Math.max(1,kg); billedKg+=billKg; cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
       totalCost+=cost;
-      const ok=sup.stock(c); if(!ok) anyOOS=true;
+      const ok=sup.stock(rep); if(!ok) anyOOS=true;
       // Hitex: tag each colour with its nearest catalogue item number (932007-<code>).
       // Far matches (no close Hitex colour) are flagged ≈ and linked to the exact yarn
       // at Tufting Europe, the range the palette is drawn from.
-      const m = supplier==='hitex' ? hitexMatch(c.hex) : null;
+      const m = supplier==='hitex' ? hitexMatch(rep.hex) : null;
       const approx = m && m.dE > HITEX_APPROX;
       let code = '';
       if (m && !approx){
         code = ` <span class="ycode"${m.ncs?` title="NCS ${m.ncs}"`:''}>932007-${m.code}</span>`;
       } else if (m){
-        const teTitle = `No close Hitex colour — exact ${c.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
+        const teTitle = `No close Hitex colour — exact ${rep.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
         code = ` <span class="ycode approx" title="${teTitle}">≈ 932007-${m.code}</span>`+
-          ` <a class="ycode src" href="${SUPPLIERS.te.link(c)}" target="_blank" rel="noopener" title="${teTitle}">TE&nbsp;↗</a>`;
+          ` <a class="ycode src" href="${SUPPLIERS.te.link(rep)}" target="_blank" rel="noopener" title="${teTitle}">TE&nbsp;↗</a>`;
       }
-      rows+=`<tr><td class="c"><span class="dot" style="background:${c.hex}"></span></td>`+
-        `<td><a href="${sup.link(c)}" target="_blank" rel="noopener">${c.name}</a>${code}${ok?'':' <span class="oos">sold out</span>'}</td>`+
+      rows+=`<tr><td class="c"><span class="dot" style="background:${rep.hex}"></span></td>`+
+        `<td><a href="${sup.link(rep)}" target="_blank" rel="noopener">${rep.name}</a>${code}${ok?'':' <span class="oos">sold out</span>'}</td>`+
         `<td class="qty">${detail}</td><td class="n">${sup.cur}${cost.toFixed(0)}</td></tr>`;
     });
     // Hitex volume discount on the yarn subtotal (shown as its own line)
