@@ -345,7 +345,14 @@
   }
 
   // ---------- background pattern (mask-based: only the background cells, never the symbol) ----------
-  function defaultPatternB(){ return groundIdx===2 ? 8 : 2; }   // a contrasting yarn; recolour it via its chip like any colour
+  function defaultPatternB(){
+    const sym=new Set(); if(groundMask) for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(!groundMask[y*N+x]){ const v=grid[y][x]; if(v>=0) sym.add(v); } }
+    const pref=groundIdx===2?8:2;
+    if(!sym.has(pref)) return pref;
+    let cand=palette.map((c,i)=>i).filter(i=>i!==groundIdx && !sym.has(i) && inStock(palette[i]));
+    if(!cand.length) cand=palette.map((c,i)=>i).filter(i=>i!==groundIdx && !sym.has(i));
+    return cand.length ? cand[0] : pref;
+  }   // a contrasting yarn that avoids symbol colours; recolour it via its chip like any colour
   function applyPattern(){
     if(!groundMask) return;
     const type=$('#patType').value;
