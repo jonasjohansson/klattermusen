@@ -636,9 +636,25 @@
   $('#snapBtn').onclick = roomSnapshot;
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
   $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
-  $('#saveJson').onclick = ()=>{ const data={version:2,rug_m:RUG_M,N,palette,grid}; const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'})); a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href); };
+  $('#saveJson').onclick = ()=>{
+    const data = { ...serialize(), exportedAt:new Date().toISOString() };
+    const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
+    a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href);
+  };
   $('#loadJson').onclick = ()=> $('#fileInput').click();
-  $('#fileInput').onchange = e => { const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const d=JSON.parse(rd.result); if(d.palette&&d.grid){ palette=d.palette; N=d.N||d.grid.length; grid=d.grid; groundMask=null; chipOrder=[]; updateLabels(); afterEdit(); } }catch(err){ alert('Could not read project file.'); } }; rd.readAsText(f); e.target.value=''; };
+  $('#fileInput').onchange = e => {
+    const f=e.target.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{ try{
+      const d=JSON.parse(rd.result);
+      if(!d || !d.grid || !d.palette){ alert('Not a rug project file.'); return; }
+      if(d.version>3){ alert('This project was made with a newer version of the app.'); return; }
+      const rowN = d.N || d.grid.length;
+      if(!Array.isArray(d.grid) || d.grid.some(r=>!Array.isArray(r) || r.length!==rowN)){ alert('Could not read project file.'); return; }
+      applyState(d); updateLabels(); afterEdit(); fitMedia();
+    }catch(err){ alert('Could not read project file.'); } };
+    rd.readAsText(f); e.target.value='';
+  };
 
   // ---------- compare curtain (drag to reveal artwork vs tufted) ----------
   let curtainX = 50, curtainDrag = false;
