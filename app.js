@@ -309,6 +309,9 @@
   function remapColour(from, to, symbolRegion){
     if(from===to) return;
     pushHistory();
+    const counts=new Array(palette.length).fill(0);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    if(counts[to]>0) to=cloneSlot(to);   // target yarn already in use elsewhere -> fresh slot, keep distinct
     const region = groundMask!=null;   // only touch cells in the clicked chip's region (symbol cells never affect the background)
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){
       if(grid[y][x]!==from) continue;
