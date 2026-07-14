@@ -570,6 +570,11 @@
     palette.forEach((c,i)=>{ if(counts[i]>0 && !order.includes(i)) order.push(i); });
     return order;
   }
+  function colorSummary(){
+    const counts=new Array(palette.length).fill(0);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    return usedColorList().map(i=>({ name:palette[i].name, hex:palette[i].hex, role: bgColors.has(i)?'background':'symbol', cells:counts[i] }));
+  }
   function coverRect(iw,ih,bw,bh){ const s=Math.max(bw/iw,bh/ih); const w=iw*s,h=ih*s; return {x:(bw-w)/2,y:(bh-h)/2,w,h}; }
   // draw one source triangle into a destination triangle (affine), clip slightly dilated to hide seams
   function drawTri(ctx,img, s0,s1,s2, d0,d1,d2, grow){
@@ -654,7 +659,7 @@
   $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
   $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
   $('#saveJson').onclick = ()=>{
-    const data = { ...serialize(), exportedAt:new Date().toISOString() };
+    const data = { ...serialize(), exportedAt:new Date().toISOString(), colors:colorSummary() };
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
     a.download='rug-project.json'; a.click(); URL.revokeObjectURL(a.href);
   };
