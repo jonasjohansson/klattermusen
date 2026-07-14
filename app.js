@@ -657,23 +657,36 @@
   // ---------- persistence (localStorage) ----------
   const LS_KEY='klattermusen.v1';
   let saveTimer=null;
+  function b64FromMask(m){ let s=''; for(let i=0;i<m.length;i++) s+=String.fromCharCode(m[i]); return btoa(s); }
+  function maskFromB64(str,len){ const bin=atob(str), m=new Uint8Array(len); for(let i=0;i<len&&i<bin.length;i++) m[i]=bin.charCodeAt(i); return m; }
+  function serialize(){
+    return { version:3, rug_m:RUG_M, N, grid, palette,
+      groundIdx, patternB, bgColors:[...bgColors], chipOrder, recolorTarget, recolorSymbol,
+      groundMask: groundMask?b64FromMask(groundMask):null,
+      corners, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value };
+  }
+  function applyState(d, keepHistory){
+    N=d.N; grid=d.grid; if(d.palette) palette=d.palette;
+    groundIdx=d.groundIdx; patternB=d.patternB; chipOrder=d.chipOrder||[];
+    recolorTarget=d.recolorTarget; recolorSymbol=!!d.recolorSymbol;
+    bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));
+    groundMask = d.groundMask!=null ? maskFromB64(d.groundMask, N*N)
+      : (function(){ const m=new Uint8Array(N*N); for(let y=0;y<N;y++)for(let x=0;x<N;x++) m[y*N+x]=bgColors.has(grid[y][x])?1:0; return m; })();
+    if(d.corners) corners=d.corners;
+    if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
+    if(d.pileMM){ pileMM=d.pileMM; const el=$('#pileMM'); if(el) el.value=pileMM; }
+    if(d.patType){ $('#patType').value=d.patType; } if(d.patSize) $('#patSize').value=d.patSize;
+    if(!keepHistory){ undoStack.length=0; redoStack.length=0; }
+  }
   function saveState(){
-    try{ localStorage.setItem(LS_KEY, JSON.stringify({ N, grid, palette, groundIdx, patternB, bgColors:[...bgColors], chipOrder, corners, recolorTarget, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value })); }catch(_){ }
+    try{ localStorage.setItem(LS_KEY, JSON.stringify(serialize())); }catch(_){ }
   }
   function queueSave(){ clearTimeout(saveTimer); saveTimer=setTimeout(saveState, 400); }
   function loadState(){
     try{
       const raw=localStorage.getItem(LS_KEY); if(!raw) return false;
-      const d=JSON.parse(raw); if(!d.grid) return false;
-      N=d.N; grid=d.grid; if(d.palette) palette=d.palette;
-      groundIdx=d.groundIdx; patternB=d.patternB; chipOrder=d.chipOrder||[]; recolorTarget=d.recolorTarget;
-      bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));
-      if(d.corners) corners=d.corners;
-      if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
-      if(d.pileMM){ pileMM=d.pileMM; const el=$('#pileMM'); if(el) el.value=pileMM; }
-      if(d.patType){ $('#patType').value=d.patType; } if(d.patSize) $('#patSize').value=d.patSize;
-      groundMask=new Uint8Array(N*N);                          // background region = cells holding a background colour
-      for(let y=0;y<N;y++)for(let x=0;x<N;x++){ groundMask[y*N+x]= bgColors.has(grid[y][x])?1:0; }
+      const d=JSON.parse(raw); if(!d||!d.grid) return false;
+      applyState(d);
       updateLabels(); afterEdit(); fitMedia();
       return true;
     }catch(_){ return false; }
