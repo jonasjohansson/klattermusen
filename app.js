@@ -305,6 +305,7 @@
   }
 
   // ---------- recolour (used colours + full palette tray in the dock) ----------
+  function cloneSlot(srcIdx){ palette.push({...palette[srcIdx]}); return palette.length-1; }
   function remapColour(from, to, symbolRegion){
     if(from===to) return;
     pushHistory();
