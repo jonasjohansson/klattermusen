@@ -650,7 +650,7 @@
       if(!d || !d.grid || !d.palette){ alert('Not a rug project file.'); return; }
       if(d.version>3){ alert('This project was made with a newer version of the app.'); return; }
       const rowN = d.N || d.grid.length;
-      if(!Array.isArray(d.grid) || d.grid.some(r=>!Array.isArray(r) || r.length!==rowN)){ alert('Could not read project file.'); return; }
+      if(!Array.isArray(d.grid) || d.grid.length!==rowN || d.grid.some(r=>!Array.isArray(r) || r.length!==rowN)){ alert('Could not read project file.'); return; }
       applyState(d); updateLabels(); afterEdit(); fitMedia();
     }catch(err){ alert('Could not read project file.'); } };
     rd.readAsText(f); e.target.value='';
