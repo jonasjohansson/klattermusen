@@ -118,9 +118,9 @@
   const tuftCache = document.createElement('canvas'); tuftCache.width = tuftCache.height = 640; const tctx = tuftCache.getContext('2d');
 
   // ---------- history ----------
-  function snapshot(){ return JSON.stringify({grid, palette}); }
+  function snapshot(){ return JSON.stringify(serialize()); }
   function pushHistory(){ undoStack.push(snapshot()); if (undoStack.length>80) undoStack.shift(); redoStack.length=0; }
-  function restore(s){ const d=JSON.parse(s); grid=d.grid; palette=d.palette; afterEdit(); }
+  function restore(s){ const d=JSON.parse(s); applyState(d, true); updateLabels(); afterEdit(); }
   function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); }
   function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); }
 
