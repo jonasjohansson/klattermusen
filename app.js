@@ -563,6 +563,37 @@
 
   // ---------- room snapshot: room photo + perspective-warped rug + colour legend ----------
   const SNAP_FONT='ui-monospace, SFMono-Regular, Menlo, monospace';
+  function captionText(){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    return `Klättermusens Verkstad · ${RUG_M.toFixed(1)}×${RUG_M.toFixed(1)} m · ${pileMM} mm cut pile · ${iso}`; }
+  function legendLayout(cols, availW, scale){
+    const pad=24*scale, sw=26*scale, lh=Math.max(sw+10*scale, 34*scale), titleH=44*scale;
+    const colW=Math.min(260*scale, availW-2*pad);
+    const perRow=Math.max(1, Math.floor((availW-2*pad)/colW));
+    const rowsN=cols.length?Math.ceil(cols.length/perRow):0;
+    const height=cols.length ? (pad + titleH + rowsN*lh + pad) : 0;
+    return {pad,sw,lh,titleH,colW,perRow,height};
+  }
+  // draws the colour legend band with its top-left at (ox,oy); returns the band height used
+  function drawLegend(ctx, cols, ox, oy, availW, scale){
+    if(!cols.length) return 0;
+    const L=legendLayout(cols, availW, scale);
+    let ly=oy+L.pad;
+    ctx.fillStyle='#111'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+    ctx.font=`${22*scale}px ${SNAP_FONT}`;
+    ctx.fillText(captionText(), ox+L.pad, ly+24*scale);
+    ly+=L.titleH;
+    ctx.font=`${15*scale}px ${SNAP_FONT}`;
+    cols.forEach((idx,k)=>{
+      const col=k%L.perRow, row=Math.floor(k/L.perRow);
+      const x=ox+L.pad+col*L.colW, y=ly+row*L.lh;
+      ctx.fillStyle=palette[idx].hex; ctx.fillRect(x,y,L.sw,L.sw);
+      ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.strokeRect(x+0.5,y+0.5,L.sw-1,L.sw-1);
+      ctx.fillStyle='#111'; ctx.textBaseline='middle';
+      ctx.fillText(palette[idx].name+(bgColors.has(idx)?'':'  (symbol)'), x+L.sw+10*scale, y+L.sw/2);
+      ctx.textBaseline='alphabetic';
+    });
+    return L.height;
+  }
   function usedColorList(){
     const counts=new Array(palette.length).fill(0);
     for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
@@ -614,11 +645,7 @@
     if(!W||!H){ alert('Open the room view first, then take a snapshot.'); return; }
     const scale=2, ow=Math.round(W*scale), oh=Math.round(H*scale);
     const cols=usedColorList();
-    const pad=24*scale, sw=26*scale, lh=Math.max(sw+10*scale, 34*scale);
-    const colW=Math.min(260*scale, ow-2*pad);
-    const perRow=Math.max(1, Math.floor((ow-2*pad)/colW));
-    const rowsN=cols.length?Math.ceil(cols.length/perRow):0, titleH=44*scale;
-    const legendH = cols.length ? (pad + titleH + rowsN*lh + pad) : 0;
+    const legendH = legendLayout(cols, ow, scale).height;
     const cv=document.createElement('canvas'); cv.width=ow; cv.height=oh+legendH;
     const ctx=cv.getContext('2d');
     ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,cv.width,cv.height);
@@ -636,23 +663,7 @@
     if(fg && fg.naturalWidth){ const rf=coverRect(fg.naturalWidth,fg.naturalHeight,ow,oh); ctx.drawImage(fg, rf.x,rf.y,rf.w,rf.h); }
     ctx.restore();
     // colour legend baked into the file
-    if(cols.length){
-      let ly=oh+pad;
-      ctx.fillStyle='#111'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
-      ctx.font=`${22*scale}px ${SNAP_FONT}`;
-      ctx.fillText(`Klättermusens Verkstad · ${RUG_M.toFixed(1)}×${RUG_M.toFixed(1)} m · ${pileMM} mm cut pile`, pad, ly+24*scale);
-      ly+=titleH;
-      ctx.font=`${15*scale}px ${SNAP_FONT}`;
-      cols.forEach((idx,k)=>{
-        const col=k%perRow, row=Math.floor(k/perRow);
-        const x=pad+col*colW, y=ly+row*lh;
-        ctx.fillStyle=palette[idx].hex; ctx.fillRect(x,y,sw,sw);
-        ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.strokeRect(x+0.5,y+0.5,sw-1,sw-1);
-        ctx.fillStyle='#111'; ctx.textBaseline='middle';
-        ctx.fillText(palette[idx].name+(bgColors.has(idx)?'':'  (symbol)'), x+sw+10*scale, y+sw/2);
-        ctx.textBaseline='alphabetic';
-      });
-    }
+    drawLegend(ctx, cols, 0, oh, ow, scale);
     downloadCanvas(cv, 'klattermusens-verkstad-room.png');
   }
   $('#snapBtn').onclick = roomSnapshot;
