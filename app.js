@@ -579,8 +579,11 @@
     const L=legendLayout(cols, availW, scale);
     let ly=oy+L.pad;
     ctx.fillStyle='#111'; ctx.textBaseline='alphabetic'; ctx.textAlign='left';
+    const cap=captionText(), maxCapW=availW-2*L.pad;
     ctx.font=`${22*scale}px ${SNAP_FONT}`;
-    ctx.fillText(captionText(), ox+L.pad, ly+24*scale);
+    const capW=ctx.measureText(cap).width;
+    if(capW>maxCapW) ctx.font=`${Math.max(9, 22*scale*maxCapW/capW)}px ${SNAP_FONT}`;   // shrink caption to fit the canvas width
+    ctx.fillText(cap, ox+L.pad, ly+24*scale);
     ly+=L.titleH;
     ctx.font=`${15*scale}px ${SNAP_FONT}`;
     cols.forEach((idx,k)=>{
