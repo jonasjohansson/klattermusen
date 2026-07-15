@@ -707,6 +707,15 @@
     rd.readAsText(f); e.target.value='';
   };
 
+  // dropdown menus (Import/Export/BOM): close on outside click, Escape, or after an action button
+  document.addEventListener('pointerdown', e=>{
+    document.querySelectorAll('details.menu[open]').forEach(d=>{ if(!d.contains(e.target)) d.open=false; });
+  });
+  window.addEventListener('keydown', e=>{ if(e.key==='Escape') document.querySelectorAll('details.menu[open]').forEach(d=> d.open=false); });
+  document.querySelectorAll('details.menu .menu-pop').forEach(pop=>{
+    pop.addEventListener('click', e=>{ if(e.target.closest('button')) pop.closest('details').open=false; });   // close after an action button; leave selects/inputs open
+  });
+
   // ---------- compare curtain (drag to reveal artwork vs tufted) ----------
   let curtainX = 50, curtainDrag = false;
   function applyCurtain(){ $('#compare').style.setProperty('--cx', curtainX+'%'); }
