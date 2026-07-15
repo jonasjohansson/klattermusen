@@ -739,7 +739,7 @@
       corners, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value };
   }
   function applyState(d, keepHistory){
-    N=d.N; grid=d.grid; if(d.palette) palette=d.palette;
+    N=d.N||d.grid.length; grid=d.grid; if(d.palette) palette=d.palette;
     groundIdx=d.groundIdx; patternB=d.patternB; chipOrder=d.chipOrder||[];
     recolorTarget=d.recolorTarget; recolorSymbol=!!d.recolorSymbol;
     bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));

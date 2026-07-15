@@ -118,9 +118,9 @@
   .rc-tool { width: 28px; height: 28px; padding: 0; font-size: 13px; }
   .rc-tool.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
   /* sold-out yarns: dimmed with a diagonal hatch overlay */
-  .rc-sw, .tray-sw { position: relative; }
-  .rc-sw.oos, .tray-sw.oos { opacity: .8; }
-  .rc-sw.oos::after, .tray-sw.oos::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(255,255,255,.85) 0 1.5px, transparent 1.5px 5px); }
+  .tray-sw { position: relative; }
+  .tray-sw.oos { opacity: .8; }
+  .tray-sw.oos::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: repeating-linear-gradient(45deg, rgba(255,255,255,.85) 0 1.5px, transparent 1.5px 5px); }
   /* grounding shadow so the rug sits in the room */
   #studioWarp canvas { filter: drop-shadow(0 1px 4px rgba(0,0,0,.08)); }
 
