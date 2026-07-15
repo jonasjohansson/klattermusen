@@ -473,7 +473,7 @@
   function nearestIdx(r,g,b,rgbs){ let best=0,bd=Infinity; for(let i=0;i<rgbs.length;i++){ const [pr,pg,pb]=rgbs[i]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=i;} } return best; }
 
   function importImage(img){
-    const newN=+$('#importRes').value, maxColors=Math.max(1,Math.min(40,+$('#importColors').value||4)), lineArt=$('#importInvert').checked;
+    const newN=Math.max(8,Math.min(500,+$('#importRes').value||0)), maxColors=Math.max(1,Math.min(40,+$('#importColors').value||4)), lineArt=$('#importInvert').checked;
     pushHistory(); N=newN; updateLabels();
     const off=document.createElement('canvas'); off.width=off.height=N; const o=off.getContext('2d');
     const tc=document.createElement('canvas'); tc.width=tc.height=16; const t=tc.getContext('2d');
@@ -512,7 +512,10 @@
   $('#importLogo').onclick = ()=>{
     $('#importInvert').checked=true;
     fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
-      const img=new Image(); img.onload=()=>importImage(img); img.src=URL.createObjectURL(b);
+      const img=new Image();
+      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); };
+      img.onerror=()=>{ URL.revokeObjectURL(img.src); alert('Could not load the logo.'); };
+      img.src=URL.createObjectURL(b);
     }).catch(()=>alert('logo.png not found — serve the app via the localhost URL.'));
   };
   $('#imgInput').onchange = e => {
@@ -559,7 +562,7 @@
   window.addEventListener('resize', fitMedia);
 
   // ---------- export / save ----------
-  function downloadCanvas(c,name){ c.toBlob(b=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
+  function downloadCanvas(c,name){ c.toBlob(b=>{ if(!b){ alert('Could not export the image.'); return; } const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=name; a.click(); URL.revokeObjectURL(a.href); }); }
 
   // ---------- room snapshot: room photo + perspective-warped rug + colour legend ----------
   const SNAP_FONT='ui-monospace, SFMono-Regular, Menlo, monospace';
@@ -764,7 +767,8 @@
     afterEdit(); fitMedia();
     fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
       $('#importInvert').checked=true; const img=new Image();
-      img.onload=()=>{ importImage(img); undoStack.length=0; redoStack.length=0; renderRecolour(); };
+      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); undoStack.length=0; redoStack.length=0; renderRecolour(); };
+      img.onerror=()=>URL.revokeObjectURL(img.src);
       img.src=URL.createObjectURL(b);
     }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
   }
