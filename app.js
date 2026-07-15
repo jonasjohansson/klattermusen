@@ -667,8 +667,20 @@
     downloadCanvas(cv, 'klattermusens-verkstad-room.png');
   }
   $('#snapBtn').onclick = roomSnapshot;
-  $('#exportTufted').onclick = ()=>{ const c=document.createElement('canvas'); c.width=c.height=1200; drawTufted(c.getContext('2d'),1200); downloadCanvas(c,'rug-tufted.png'); };
-  $('#exportDesign').onclick = ()=>{ const W=1600,c=document.createElement('canvas'); c.width=c.height=W; fillGridCells(c.getContext('2d'), W, '#ffffff'); downloadCanvas(c,'rug-design.png'); };
+  $('#exportTufted').onclick = ()=>{
+    const W=1200, s=2, cols=usedColorList(), lh=legendLayout(cols, W, s).height;
+    const c=document.createElement('canvas'); c.width=W; c.height=W+lh;
+    const ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
+    drawTufted(ctx, W); drawLegend(ctx, cols, 0, W, W, s);
+    downloadCanvas(c,'rug-tufted.png');
+  };
+  $('#exportDesign').onclick = ()=>{
+    const W=1600, s=2, cols=usedColorList(), lh=legendLayout(cols, W, s).height;
+    const c=document.createElement('canvas'); c.width=W; c.height=W+lh;
+    const ctx=c.getContext('2d'); ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,c.width,c.height);
+    fillGridCells(ctx, W, '#ffffff'); drawLegend(ctx, cols, 0, W, W, s);
+    downloadCanvas(c,'rug-design.png');
+  };
   $('#saveJson').onclick = ()=>{
     const data = { ...serialize(), exportedAt:new Date().toISOString(), colors:colorSummary() };
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));
