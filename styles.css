@@ -30,9 +30,6 @@
   /* header — floats translucently over the imagery */
   header { position: absolute; top: 0; left: 0; right: 0; z-index: 20; display: flex; align-items: center; gap: 18px; padding: 0 14px; height: 46px;
     border-bottom: 1px solid var(--border); background: var(--glass-bg); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); }
-  .tabs { display: inline-flex; gap: 16px; }
-  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 3px 1px; color: var(--muted); font: inherit; cursor: pointer; }
-  .tabs button.active { color: var(--fg); border-bottom-color: var(--fg); }
   .spacer { flex: 1; }
   .dims { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: .03em; }
   .dims strong { color: var(--fg); font-weight: 600; }
@@ -44,7 +41,6 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px; list-style: none;
   }
   button:hover, .menu > summary:hover { border-color: var(--fg); }
-  button.primary { background: var(--fg); color: var(--panel); border-color: var(--fg); }
   button.on { background: var(--fg); color: var(--panel); border-color: var(--fg); }
   button:disabled { opacity: .3; cursor: default; border-color: var(--border); }
   select, input[type="number"], input[type="text"] { font: inherit; font-size: 12px; padding: 5px 7px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--panel); color: var(--fg); }
@@ -55,7 +51,7 @@
   .menu { position: relative; }
   .menu > summary::-webkit-details-marker { display: none; }
   .menu[open] > summary { border-color: var(--fg); }
-  .menu .menu-pop { position: absolute; right: 0; top: calc(100% + 6px); width: 210px; background: var(--glass-bg-soft); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 8px 26px rgba(0,0,0,.14); padding: 11px; z-index: 60; display: flex; flex-direction: column; gap: 10px; }
+  .menu .menu-pop { position: absolute; right: 0; top: calc(100% + 6px); width: 210px; background: var(--glass-bg-soft); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-menu); padding: 11px; z-index: 60; display: flex; flex-direction: column; gap: 10px; }
   .menu .menu-pop label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); }
   .menu .menu-pop .inline { flex-direction: row; align-items: center; gap: 7px; }
 
@@ -84,9 +80,6 @@
   .studio-wrap img.fg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; }  /* table in front of the rug */
   #studioWarp { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
   #studioWarp canvas { position: absolute; top: 0; left: 0; transform-origin: 0 0; pointer-events: auto; cursor: move; }
-  .handle { position: absolute; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: var(--panel); border: 1.5px solid var(--fg); box-shadow: var(--shadow-ctrl); cursor: grab; touch-action: none; z-index: 5; opacity: 0; transition: opacity .12s; }
-  .studio-wrap:hover .handle, .studio-wrap.dragging .handle { opacity: 1; }
-  .handle:active { cursor: grabbing; }
   canvas { display: block; touch-action: none; }
 
   /* curtain compare */
@@ -114,12 +107,8 @@
   .pile-row .note { text-transform: none; letter-spacing: 0; margin-left: auto; }
   .dock-row.tray { gap: 4px; }
   .dock-row .lbl { font: 10px var(--mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
-  .dock-row .sep { width: 1px; height: 20px; background: var(--border); margin: 0 5px; }
   .dock-row input[type="number"] { width: 50px; }
   .dock-row input[type="range"] { width: 120px; }
-  .rc-sw { width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; padding: 0; box-shadow: var(--inset-faint); }
-  .rc-sw:hover { border-color: var(--fg); }
-  .rc-sw.active { outline: 2px solid var(--fg); outline-offset: 1px; }
   .tray-sw { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; padding: 0; }
   .tray-sw:hover { border-color: var(--fg); }
   .tray-sw.active { outline: 2px solid var(--fg); outline-offset: 1px; }

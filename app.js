@@ -218,10 +218,7 @@
     });
   }
   function drawStudio(){ paintStudio(); placeStudio(); }
-  function positionHandles(){
-    const wrap=$('#studioWrap'); const W=wrap.clientWidth, H=wrap.clientHeight;
-    document.querySelectorAll('.handle').forEach(h=>{ const c=corners[+h.dataset.corner]; h.style.left=(c.x*W)+'px'; h.style.top=(c.y*H)+'px'; });
-  }
+  function positionHandles(){}
 
   // ---------- fit the two media boxes into their views ----------
   function fitMedia(){
