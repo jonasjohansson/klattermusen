@@ -232,7 +232,7 @@
   }
 
   // ---------- estimate ----------
-  const PILE_KG_PER_MM = 0.24;   // wool cut-pile face weight ≈ 0.24 kg/m² per mm of pile
+  const PILE_KG_PER_MM = 0.20;   // wool cut-pile face weight ≈ 0.20 kg/m² per mm of pile (hand-tuft density)
   function renderEstimate(){
     const sup=SUPPLIERS[supplier], price=sup.price, m=sup.mat;
     const DENSITY = pileMM * PILE_KG_PER_MM;   // kg/m² face weight, derived from pile height
