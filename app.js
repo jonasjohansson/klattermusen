@@ -47,9 +47,9 @@
     {hex:'#6a4ca0', name:'Violet',         u:'violet',         s:1},
     {hex:'#4a2f6b', name:'Dark Purple',    u:'dark-purple',    s:1},
     {hex:'#4a2440', name:'Aubergine Purple',u:'auberginepurple',s:1},
-    {hex:'#d44d8a', name:'Deep Pink',      u:'deep-pink',      s:0},
+    {hex:'#d44d8a', name:'Deep Pink',      u:'deep-pink',      s:1},
     {hex:'#c0357f', name:'Fuchsia Pink',   u:'fuchsia-pink',   s:1},
-    {hex:'#ecc0d2', name:'Light Pink',     u:'light-pink',     s:0},
+    {hex:'#ecc0d2', name:'Light Pink',     u:'light-pink',     s:1},
   ];
   // Suppliers (stock checked 2026-06-09). The design palette is shared; the toggle
   // reframes pricing/links/stock for the BOM. Hitex/Tufting Shop links go to their
@@ -254,18 +254,19 @@
       else { const billKg=Math.max(1,kg); billedKg+=billKg; cost=billKg*price; detail=`${billKg.toFixed(1)} kg`; }   // Hitex: 1kg min/colour
       totalCost+=cost;
       const ok=sup.stock(rep); if(!ok) anyOOS=true;
-      // Hitex: tag each colour with its nearest catalogue item number (932007-<code>).
-      // Far matches (no close Hitex colour) are flagged ≈ and linked to the exact yarn
-      // at Tufting Europe, the range the palette is drawn from.
+      // Hitex: tag each colour with its nearest catalogue item number (932007-<code>),
+      // but only when it's a genuinely close match. If Hitex has no close colour we show
+      // no code at all — a misleading nearest-neighbour reads like an answer when it isn't —
+      // and just link to the exact yarn at Tufting Europe, the range the palette is drawn
+      // from. The nearest Hitex code stays in the link's tooltip for reference.
       const m = supplier==='hitex' ? hitexMatch(rep.hex) : null;
       const approx = m && m.dE > HITEX_APPROX;
       let code = '';
       if (m && !approx){
         code = ` <span class="ycode"${m.ncs?` title="NCS ${m.ncs}"`:''}>932007-${m.code}</span>`;
       } else if (m){
-        const teTitle = `No close Hitex colour — exact ${rep.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
-        code = ` <span class="ycode approx" title="${teTitle}">≈ 932007-${m.code}</span>`+
-          ` <a class="ycode src" href="${SUPPLIERS.te.link(rep)}" target="_blank" rel="noopener" title="${teTitle}">TE&nbsp;↗</a>`;
+        const teTitle = `Not at Hitex — exact ${rep.name} yarn at Tufting Europe (nearest Hitex 932007-${m.code})`;
+        code = ` <a class="ycode src" href="${SUPPLIERS.te.link(rep)}" target="_blank" rel="noopener" title="${teTitle}">TE&nbsp;↗</a>`;
       }
       rows+=`<tr><td class="c"><span class="dot" style="background:${rep.hex}"></span></td>`+
         `<td><a href="${sup.link(rep)}" target="_blank" rel="noopener">${rep.name}</a>${code}${ok?'':' <span class="oos">sold out</span>'}</td>`+
