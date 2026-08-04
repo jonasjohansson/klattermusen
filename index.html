@@ -20,8 +20,8 @@
             <option value="100">100 × 100</option>
             <option value="200">200 × 200</option>
             <option value="300">300 × 300</option>
-            <option value="400" selected>400 × 400 · 5mm</option>
-            <option value="500">500 × 500 · 4mm</option>
+            <option value="400">400 × 400 · 5mm</option>
+            <option value="500" selected>500 × 500 · 4mm</option>
           </select>
         </label>
         <label>Max colours <input type="number" id="importColors" value="2" min="1" max="40"></label>
@@ -36,6 +36,7 @@
         <button id="snapBtn" title="Download the room view with the rug and colour legend">Room snapshot</button>
         <button id="exportTufted">Tufted PNG</button>
         <button id="exportDesign">Flat PNG</button>
+        <button id="exportSmooth" title="Smooth-edge render for projecting and tracing — no tuft pixels, no legend">Projection PNG</button>
         <button id="saveJson">Save project (.json)</button>
       </div>
     </details>

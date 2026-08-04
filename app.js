@@ -685,6 +685,42 @@
     fillGridCells(ctx, W, '#ffffff'); drawLegend(ctx, cols, 0, W, W, s);
     downloadCanvas(c,'rug-design.png');
   };
+  // smooth-contour render for projecting/tracing on the wall: every colour region's
+  // mask is upscaled with bilinear smoothing and re-thresholded, turning tuft squares
+  // into curves. Slightly dilated (midpoint < 128) so neighbouring regions overlap
+  // instead of leaving base-colour seams; layers go largest-first, symbol on top.
+  function drawSmooth(ctx, S){
+    const counts=new Array(palette.length).fill(0);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    const bg=[...bgColors].filter(i=>counts[i]>0).sort((a,b)=>counts[b]-counts[a]);
+    const sym=palette.map((c,i)=>i).filter(i=>counts[i]>0 && !bgColors.has(i)).sort((a,b)=>counts[b]-counts[a]);
+    const base=bg[0]??sym[0]; if(base==null) return;
+    ctx.fillStyle=palette[base].hex; ctx.fillRect(0,0,S,S);
+    const m=document.createElement('canvas'); m.width=m.height=N; const mc=m.getContext('2d');
+    const big=document.createElement('canvas'); big.width=big.height=S; const bc=big.getContext('2d');
+    bc.imageSmoothingEnabled=true; bc.imageSmoothingQuality='high';
+    const layer=(idx,blurCells)=>{
+      const id=mc.createImageData(N,N);
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(grid[y][x]===idx) id.data[(y*N+x)*4+3]=255; }
+      mc.putImageData(id,0,0);
+      bc.clearRect(0,0,S,S);
+      bc.filter=`blur(${(S/N)*blurCells}px)`; bc.drawImage(m,0,0,S,S); bc.filter='none';
+      const d=bc.getImageData(0,0,S,S), [r,g,b]=hexToRgb(palette[idx].hex);
+      for(let k=0;k<d.data.length;k+=4){
+        const a=d.data[k+3];
+        d.data[k]=r; d.data[k+1]=g; d.data[k+2]=b;
+        d.data[k+3]= a>=124?255 : a<=100?0 : Math.round((a-100)*255/24);
+      }
+      bc.putImageData(d,0,0);
+      ctx.drawImage(big,0,0);
+    };
+    bg.slice(1).forEach(i=>layer(i,1.2)); sym.forEach(i=>layer(i,0.6));   // blobs rounded hard, lettering gently
+  }
+  $('#exportSmooth').onclick = ()=>{
+    const S=2400, c=document.createElement('canvas'); c.width=c.height=S;
+    drawSmooth(c.getContext('2d'), S);
+    downloadCanvas(c,'rug-projection.png');
+  };
   $('#saveJson').onclick = ()=>{
     const data = { ...serialize(), exportedAt:new Date().toISOString(), colors:colorSummary() };
     const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify(data)],{type:'application/json'}));

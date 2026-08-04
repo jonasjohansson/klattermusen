@@ -29,14 +29,15 @@ Two live views side by side (drag the splitter between them), edits ripple acros
   drop the selected yarn into just that area (e.g. inside a letter or the mouse).
 - **Artwork** — upload an image or load the logo. Import settings (detail up to
   500×500 / 4mm, max colours, line-art mode) live in a small drawer.
-- **Export** — tufted PNG, flat PNG, save/load project `.json`.
+- **Export** — tufted PNG, flat PNG, projection PNG (smooth contours, no tuft
+  pixels — for projecting onto the wall/cloth and tracing), save/load project `.json`.
 
 ### Yarn estimate
 Per-colour kg and whole 500g cones to order, total cones and €cost. Tune pile
 density (kg/m²) and €/cone.
 
 ## Notes
-- Default resolution 400×400 (5mm tufts ≈ cut-pile gauge).
+- Default resolution 500×500 (4mm tufts ≈ cut-pile gauge).
 - Palette hex values approximate the Tufting Europe colour names — confirm against
   their physical sample book before ordering.
 - No drawing tools: design your artwork elsewhere and upload it.
