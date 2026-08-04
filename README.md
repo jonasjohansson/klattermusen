@@ -9,7 +9,7 @@ Open via the local server (needed for the logo auto-load):
 
   http://localhost/org/jonasjohansson/tuftview/
 
-(or open `index.html` directly — `logo.png`, `room.jpg`, `studio.jpg` must sit
+(or open `index.html` directly — `logo.svg`, `room.jpg`, `studio.jpg` must sit
 next to it; the one-click/auto logo load only works over localhost).
 
 ## Two tabs

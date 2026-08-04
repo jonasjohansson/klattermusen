@@ -509,12 +509,12 @@
   $('#importBtn').onclick = ()=> $('#imgInput').click();
   $('#importLogo').onclick = ()=>{
     $('#importInvert').checked=true;
-    fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
+    fetch('logo.svg').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
       const img=new Image();
       img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); };
       img.onerror=()=>{ URL.revokeObjectURL(img.src); alert('Could not load the logo.'); };
       img.src=URL.createObjectURL(b);
-    }).catch(()=>alert('logo.png not found — serve the app via the localhost URL.'));
+    }).catch(()=>alert('logo.svg not found — serve the app via the localhost URL.'));
   };
   $('#imgInput').onchange = e => {
     const f=e.target.files[0]; if(!f) return;
@@ -767,14 +767,46 @@
   }
   $('#clearAll').onclick = ()=>{ if(confirm('Reset to the Klättermusens logo and clear your saved design?')){ try{ localStorage.removeItem(LS_KEY); }catch(_){ } location.reload(); } };
 
+  // ---------- default colourway (fresh load / Reset) ----------
+  // Logo in Light Pink over the botanical-1 background, its clusters mapped
+  // darkest→lightest to Salmon / Aubergine Purple / Ochre Yellow / Maple Brown.
+  function applyDefaultColourway(){
+    const idxOf=n=>palette.findIndex(c=>c.name===n);
+    const DEFAULT_SYMBOL = idxOf('Light Pink');
+    const DEFAULT_BG = ['Salmon','Aubergine Purple','Ochre Yellow','Maple Brown'].map(idxOf);
+    if(DEFAULT_SYMBOL<0 || DEFAULT_BG.some(i=>i<0)) return;
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ if(grid[y][x]<0) continue; grid[y][x]= groundMask[y*N+x] ? DEFAULT_BG[0] : DEFAULT_SYMBOL; }
+    groundIdx=DEFAULT_BG[0]; bgColors=new Set([DEFAULT_BG[0]]); chipOrder=[DEFAULT_SYMBOL, DEFAULT_BG[0]];
+    recolorTarget=DEFAULT_SYMBOL; recolorSymbol=true;
+    const done=()=>{ undoStack.length=0; redoStack.length=0; afterEdit(); };
+    const img=new Image();
+    img.onload=()=>{
+      applyBgImage(img);
+      const ranked=[...bgColors].sort((a,b)=>lumOf(a)-lumOf(b)), map={};
+      ranked.forEach((i,r)=> map[i]=DEFAULT_BG[Math.min(r,DEFAULT_BG.length-1)]);
+      const cc={};
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+        if(!groundMask[y*N+x]) continue;
+        const to=map[grid[y][x]]; if(to!=null) grid[y][x]=to;
+        cc[grid[y][x]]=(cc[grid[y][x]]||0)+1;
+      }
+      bgColors=new Set(Object.keys(cc).map(Number));
+      groundIdx=+Object.keys(cc).sort((a,b)=>cc[b]-cc[a])[0];
+      chipOrder=[DEFAULT_SYMBOL, ...[...bgColors].sort((a,b)=>cc[b]-cc[a])];
+      done();
+    };
+    img.onerror=done;                        // pattern missing -> plain pink-on-salmon logo
+    img.src='patterns/botanical-1.jpg';
+  }
+
   // ---------- init ----------
   applySplit(); applyCurtain(); buildPatLib();
   grid = blankGrid(N); updateLabels();
   if (!loadState()){                                           // restore saved work, else auto-load the logo
     afterEdit(); fitMedia();
-    fetch('logo.png').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
+    fetch('logo.svg').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
       $('#importInvert').checked=true; const img=new Image();
-      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); undoStack.length=0; redoStack.length=0; renderRecolour(); };
+      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); applyDefaultColourway(); };
       img.onerror=()=>URL.revokeObjectURL(img.src);
       img.src=URL.createObjectURL(b);
     }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
