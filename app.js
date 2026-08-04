@@ -105,6 +105,7 @@
   const inStock = c => SUPPLIERS[supplier].stock(c);
   let recolorTarget = null, recolorSymbol = false;
   let groundIdx = null, patternB = null, groundMask = null;   // background-pattern state
+  let srcArt = null, srcBg = null;   // {url, lineArt} / {url} — import sources kept for the full-res projection export
   let bgColors = new Set();   // palette indices that make up the background (1 = plain, 2 = checker, many = image)
   let chipOrder = [];   // stable slot order for the in-rug chips (so recolouring doesn't reshuffle them)
 
@@ -375,8 +376,9 @@
   $('#patSize').onchange=applyPattern;
 
   // multi-colour background from an image — quantised to the palette, only over the background mask
-  function applyBgImage(img){
+  function applyBgImage(img, srcUrl){
     if(!groundMask) return;
+    srcBg = srcUrl ? {url:srcUrl} : null;
     const k=Math.max(2,Math.min(8,parseInt($('#bgColorsN').value)||4));
     const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height;
     // flatten for tufting: cover-fit into a SMALL canvas (kills texture/gradients), then smooth-upscale to N
@@ -414,12 +416,12 @@
     afterEdit();
   }
   $('#bgPatBtn').onclick = ()=> $('#bgPatInput').click();
-  $('#bgPatInput').onchange = e=>{ const f=e.target.files[0]; if(!f) return; const img=new Image(); img.onload=()=>applyBgImage(img); img.onerror=()=>alert('Could not load image.'); img.src=URL.createObjectURL(f); e.target.value=''; };
+  $('#bgPatInput').onchange = e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ const img=new Image(); img.onload=()=>applyBgImage(img, rd.result); img.onerror=()=>alert('Could not load image.'); img.src=rd.result; }; rd.readAsDataURL(f); e.target.value=''; };
   // built-in pattern library
   const PATTERNS=['patterns/floral-1.jpg','patterns/floral-2.jpg','patterns/botanical-1.jpg'];
   function buildPatLib(){ const wrap=$('#patLib'); if(!wrap) return; wrap.innerHTML=''; PATTERNS.forEach(src=>{
     const b=document.createElement('button'); b.className='pat-thumb'; b.style.backgroundImage='url('+src+')'; b.title=src.split('/').pop().replace(/\.\w+$/,'');
-    b.onclick=()=>{ const img=new Image(); img.onload=()=>applyBgImage(img); img.onerror=()=>alert('Could not load pattern.'); img.src=src; };
+    b.onclick=()=>{ const img=new Image(); img.onload=()=>applyBgImage(img, src); img.onerror=()=>alert('Could not load pattern.'); img.src=src; };
     wrap.appendChild(b);
   }); }
   function renderRecolour(){
@@ -470,8 +472,9 @@
   const palRgb = () => palette.map(c=>hexToRgb(c.hex));
   function nearestIdx(r,g,b,rgbs){ let best=0,bd=Infinity; for(let i=0;i<rgbs.length;i++){ const [pr,pg,pb]=rgbs[i]; const d=(pr-r)**2+(pg-g)**2+(pb-b)**2; if(d<bd){bd=d;best=i;} } return best; }
 
-  function importImage(img){
+  function importImage(img, srcUrl){
     const newN=Math.max(8,Math.min(500,+$('#importRes').value||0)), maxColors=Math.max(1,Math.min(40,+$('#importColors').value||4)), lineArt=$('#importInvert').checked;
+    srcArt = srcUrl ? {url:srcUrl, lineArt} : null; srcBg = null;
     pushHistory(); N=newN; updateLabels();
     const off=document.createElement('canvas'); off.width=off.height=N; const o=off.getContext('2d');
     const tc=document.createElement('canvas'); tc.width=tc.height=16; const t=tc.getContext('2d');
@@ -511,15 +514,16 @@
     $('#importInvert').checked=true;
     fetch('logo.svg').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
       const img=new Image();
-      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); };
+      img.onload=()=>{ importImage(img,'logo.svg'); URL.revokeObjectURL(img.src); };
       img.onerror=()=>{ URL.revokeObjectURL(img.src); alert('Could not load the logo.'); };
       img.src=URL.createObjectURL(b);
     }).catch(()=>alert('logo.svg not found — serve the app via the localhost URL.'));
   };
   $('#imgInput').onchange = e => {
     const f=e.target.files[0]; if(!f) return;
-    const img=new Image(); img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); };
-    img.onerror=()=>alert('Could not load that image.'); img.src=URL.createObjectURL(f); e.target.value='';
+    const rd=new FileReader();   // data URL (not object URL) so the source survives for the projection export
+    rd.onload=()=>{ const img=new Image(); img.onload=()=>importImage(img, rd.result); img.onerror=()=>alert('Could not load that image.'); img.src=rd.result; };
+    rd.readAsDataURL(f); e.target.value='';
   };
 
   // ---------- scene + transform ----------
@@ -716,9 +720,72 @@
     };
     bg.slice(1).forEach(i=>layer(i,1.2)); sym.forEach(i=>layer(i,0.6));   // blobs rounded hard, lettering gently
   }
-  $('#exportSmooth').onclick = ()=>{
-    const S=2400, c=document.createElement('canvas'); c.width=c.height=S;
-    drawSmooth(c.getContext('2d'), S);
+
+  // projection export, preferred path: rebuild the design from the ORIGINAL import
+  // sources at full output resolution — the background pattern re-quantised per pixel
+  // (each pixel joins the colour whose rug cells its source colour matches best) and
+  // the artwork re-rasterised crisp on top — so every edge sits exactly where the
+  // uploaded files put it, with no tuft grid involved.
+  function loadImg(url){ return new Promise((res,rej)=>{ const im=new Image(); im.onload=()=>res(im); im.onerror=rej; im.src=url; }); }
+  async function drawProjection(ctx, S){
+    const counts=new Array(palette.length).fill(0);
+    for(let y=0;y<N;y++)for(let x=0;x<N;x++){ const v=grid[y][x]; if(v>=0) counts[v]++; }
+    ctx.fillStyle=palette[groundIdx]?palette[groundIdx].hex:'#fff'; ctx.fillRect(0,0,S,S);
+    if(srcBg){
+      const img=await loadImg(srcBg.url);
+      // same flatten as applyBgImage, so region boundaries land in the same places
+      const sm=Math.max(48,Math.min(120,Math.round(N/4)));
+      const tiny=document.createElement('canvas'); tiny.width=tiny.height=sm; const tg=tiny.getContext('2d'); tg.imageSmoothingEnabled=true;
+      const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, ts=Math.max(sm/iw,sm/ih);
+      tg.drawImage(img,(sm-iw*ts)/2,(sm-ih*ts)/2,iw*ts,ih*ts);
+      const nC=document.createElement('canvas'); nC.width=nC.height=N; const ng=nC.getContext('2d');
+      ng.imageSmoothingEnabled=true; ng.drawImage(tiny,0,0,N,N);
+      const sn=ng.getImageData(0,0,N,N).data;
+      // per-colour mean of the source pixels its cells cover -> per-pixel classifier
+      const sum={}, cnt={};
+      for(let y=0;y<N;y++)for(let x=0;x<N;x++){
+        if(!groundMask[y*N+x]) continue; const v=grid[y][x]; if(v<0||!bgColors.has(v)) continue;
+        const k=(y*N+x)*4; (sum[v]=sum[v]||[0,0,0])[0]+=sn[k]; sum[v][1]+=sn[k+1]; sum[v][2]+=sn[k+2]; cnt[v]=(cnt[v]||0)+1;
+      }
+      const means=Object.keys(sum).map(v=>({rgb:sum[v].map(s=>s/cnt[v]), col:hexToRgb(palette[+v].hex)}));
+      if(means.length){
+        const big=document.createElement('canvas'); big.width=big.height=S; const bc2=big.getContext('2d');
+        bc2.imageSmoothingEnabled=true; bc2.imageSmoothingQuality='high'; bc2.drawImage(tiny,0,0,S,S);
+        const d=bc2.getImageData(0,0,S,S);
+        for(let k=0;k<d.data.length;k+=4){
+          const r=d.data[k],g=d.data[k+1],b=d.data[k+2]; let best=means[0],bd=Infinity;
+          for(const m of means){ const dd=(m.rgb[0]-r)**2+(m.rgb[1]-g)**2+(m.rgb[2]-b)**2; if(dd<bd){bd=dd;best=m;} }
+          d.data[k]=best.col[0]; d.data[k+1]=best.col[1]; d.data[k+2]=best.col[2]; d.data[k+3]=255;
+        }
+        bc2.putImageData(d,0,0); ctx.drawImage(big,0,0);
+      }
+    }
+    if(srcArt){
+      const img=await loadImg(srcArt.url);
+      const iw=img.naturalWidth||img.width, ih=img.naturalHeight||img.height, sc=Math.min(S/iw,S/ih);
+      const art=document.createElement('canvas'); art.width=art.height=S; const ag=art.getContext('2d');
+      ag.imageSmoothingEnabled=true; ag.imageSmoothingQuality='high';
+      ag.fillStyle='#fff'; ag.fillRect(0,0,S,S);
+      ag.drawImage(img,(S-iw*sc)/2,(S-ih*sc)/2,iw*sc,ih*sc);
+      const symIds=palette.map((c,i)=>i).filter(i=>counts[i]>0 && !bgColors.has(i)).sort((a,b)=>counts[b]-counts[a]);
+      if(symIds.length){
+        const [sr,sg,sb]=hexToRgb(palette[symIds[0]].hex);
+        const d=ag.getImageData(0,0,S,S);
+        for(let k=0;k<d.data.length;k+=4){
+          const lum=0.299*d.data[k]+0.587*d.data[k+1]+0.114*d.data[k+2];
+          d.data[k]=sr; d.data[k+1]=sg; d.data[k+2]=sb;
+          d.data[k+3]= lum<=116?255 : lum>=140?0 : Math.round((140-lum)*255/24);   // anti-aliased line edge
+        }
+        ag.putImageData(d,0,0); ctx.drawImage(art,0,0);
+      }
+    }
+  }
+  $('#exportSmooth').onclick = async ()=>{
+    const S=2400, c=document.createElement('canvas'); c.width=c.height=S; const ctx=c.getContext('2d');
+    try{
+      if(!srcArt && !srcBg) throw 0;
+      await drawProjection(ctx,S);
+    }catch(_){ drawSmooth(ctx,S); }   // sources gone (old saved project, file://) -> smoothed grid
     downloadCanvas(c,'rug-projection.png');
   };
   $('#saveJson').onclick = ()=>{
@@ -773,7 +840,10 @@
     return { version:3, rug_m:RUG_M, N, grid, palette,
       groundIdx, patternB, bgColors:[...bgColors], chipOrder, recolorTarget, recolorSymbol,
       groundMask: groundMask?b64FromMask(groundMask):null,
-      corners, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value };
+      corners, supplier, pileMM, patType:$('#patType').value, patSize:$('#patSize').value,
+      // sources for the projection export; huge data-URL uploads are dropped to protect the localStorage quota
+      srcArt: srcArt && srcArt.url.length<400000 ? srcArt : null,
+      srcBg:  srcBg  && srcBg.url.length <400000 ? srcBg  : null };
   }
   function applyState(d, keepHistory){
     N=d.N||d.grid.length; grid=d.grid; if(d.palette) palette=d.palette;
@@ -782,6 +852,7 @@
     bgColors=new Set(d.bgColors || (d.groundIdx!=null?[d.groundIdx]:[]));
     groundMask = d.groundMask!=null ? maskFromB64(d.groundMask, N*N)
       : (function(){ const m=new Uint8Array(N*N); for(let y=0;y<N;y++)for(let x=0;x<N;x++) m[y*N+x]=bgColors.has(grid[y][x])?1:0; return m; })();
+    srcArt=d.srcArt||null; srcBg=d.srcBg||null;
     if(d.corners) corners=d.corners;
     if(d.supplier){ supplier=d.supplier; $('#supplier').value=supplier; }
     if(d.pileMM){ pileMM=d.pileMM; const el=$('#pileMM'); if(el) el.value=pileMM; }
@@ -817,7 +888,7 @@
     const done=()=>{ undoStack.length=0; redoStack.length=0; afterEdit(); };
     const img=new Image();
     img.onload=()=>{
-      applyBgImage(img);
+      applyBgImage(img,'patterns/botanical-1.jpg');
       const ranked=[...bgColors].sort((a,b)=>lumOf(a)-lumOf(b)), map={};
       ranked.forEach((i,r)=> map[i]=DEFAULT_BG[Math.min(r,DEFAULT_BG.length-1)]);
       const cc={};
@@ -842,7 +913,7 @@
     afterEdit(); fitMedia();
     fetch('logo.svg').then(r=>{ if(!r.ok) throw 0; return r.blob(); }).then(b=>{
       $('#importInvert').checked=true; const img=new Image();
-      img.onload=()=>{ importImage(img); URL.revokeObjectURL(img.src); applyDefaultColourway(); };
+      img.onload=()=>{ importImage(img,'logo.svg'); URL.revokeObjectURL(img.src); applyDefaultColourway(); };
       img.onerror=()=>URL.revokeObjectURL(img.src);
       img.src=URL.createObjectURL(b);
     }).catch(()=>{ /* file:// — open via localhost to auto-load the logo */ });
